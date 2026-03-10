@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./backend
+    container_name: pg2bitable-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18082:8000"
+    env_file:
+      - ./backend/.env.production
+    networks:
+      - postgres_default
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/meta.json')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  postgres_default:
+    external: true

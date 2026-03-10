@@ -9,6 +9,7 @@ build/
 # Environment
 .env
 .env.local
+.env.production
 
 # Node
 node_modules/
@@ -37,3 +38,7 @@ htmlcov/
 
 # Plans
 .claude/plans/
+
+# Screenshots
+*.png
+!frontend/public/*.png
