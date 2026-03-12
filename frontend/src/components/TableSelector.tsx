@@ -43,7 +43,7 @@ export function TableSelector({
     setLoading(true);
     listSchemas(connection)
       .then(setSchemas)
-      .catch(() => setError("Failed to load schemas"))
+      .catch(() => setError("加载 Schema 失败"))
       .finally(() => setLoading(false));
   }, [connection]);
 
@@ -52,7 +52,7 @@ export function TableSelector({
     setLoading(true);
     listTables({ ...connection, schema_name: schemaName })
       .then(setTables)
-      .catch(() => setError("Failed to load tables"))
+      .catch(() => setError("加载表列表失败"))
       .finally(() => setLoading(false));
   }, [connection, schemaName]);
 
@@ -60,7 +60,7 @@ export function TableSelector({
     setError(null);
     if (mode === "table") {
       if (!tableName) {
-        setError("Please select a table");
+        setError("请选择一个表");
         return;
       }
       setLoading(true);
@@ -73,13 +73,13 @@ export function TableSelector({
         onColumnsLoaded(cols);
         onNext();
       } catch {
-        setError("Failed to load columns");
+        setError("加载列信息失败");
       } finally {
         setLoading(false);
       }
     } else {
       if (!customSQL.trim()) {
-        setError("Please enter a SQL query");
+        setError("请输入 SQL 查询语句");
         return;
       }
       onNext();
@@ -97,7 +97,7 @@ export function TableSelector({
   const schemaOptions = schemas.map((s) => ({ value: s, label: s }));
   const tableOptions = tables.map((t) => ({
     value: t.name,
-    label: `${t.name} (${t.type})`,
+    label: `${t.name}${t.type === "view" ? " (视图)" : ""}`,
   }));
 
   return (
@@ -107,30 +107,39 @@ export function TableSelector({
       <Tabs
         activeKey={mode}
         onChange={(key) => onModeChange(key as "table" | "sql")}
-        style={{ marginBottom: 16 }}
+        size="small"
+        style={{ marginBottom: 12 }}
       >
-        <TabPane tab="Table / View" itemKey="table">
-          {loading && <Spin style={{ display: "block", margin: "20px auto" }} />}
+        <TabPane tab="选择表 / 视图" itemKey="table">
+          {loading && <Spin style={{ display: "block", margin: "16px auto" }} />}
 
-          <Select
-            placeholder="Select Schema"
-            value={schemaName}
-            onChange={(v) => onSchemaChange(v as string)}
-            optionList={schemaOptions}
-            style={{ width: "100%", marginBottom: 12 }}
-          />
+          <div className="form-row">
+            <label className="form-label">{"Schema"}</label>
+            <Select
+              placeholder="选择 Schema"
+              value={schemaName}
+              onChange={(v) => onSchemaChange(v as string)}
+              optionList={schemaOptions}
+              style={{ width: "100%" }}
+              size="default"
+            />
+          </div>
 
-          <Select
-            placeholder="Select Table or View"
-            value={tableName ?? undefined}
-            onChange={(v) => onTableChange(v as string)}
-            optionList={tableOptions}
-            filter
-            style={{ width: "100%" }}
-          />
+          <div className="form-row">
+            <label className="form-label">{"表 / 视图"}</label>
+            <Select
+              placeholder="选择表或视图"
+              value={tableName ?? undefined}
+              onChange={(v) => onTableChange(v as string)}
+              optionList={tableOptions}
+              filter
+              style={{ width: "100%" }}
+              size="default"
+            />
+          </div>
         </TabPane>
 
-        <TabPane tab="Custom SQL" itemKey="sql">
+        <TabPane tab="自定义 SQL" itemKey="sql">
           <CustomSQL
             connection={connection}
             sql={customSQL}
@@ -139,16 +148,10 @@ export function TableSelector({
         </TabPane>
       </Tabs>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: 24,
-        }}
-      >
-        <Button onClick={onBack}>Back</Button>
+      <div className="footer-actions">
+        <Button onClick={onBack}>{"上一步"}</Button>
         <Button theme="solid" onClick={handleNext} loading={loading}>
-          Next
+          {"下一步"}
         </Button>
       </div>
     </div>

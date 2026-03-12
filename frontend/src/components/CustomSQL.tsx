@@ -27,10 +27,10 @@ export function CustomSQL({ connection, sql, onSQLChange }: CustomSQLProps) {
       if (result.success && result.data) {
         setPreview(result.data);
       } else {
-        setError(result.message ?? "SQL execution failed");
+        setError(result.message ?? "SQL 执行失败");
       }
     } catch {
-      setError("Failed to execute SQL preview");
+      setError("SQL 预览请求失败");
     } finally {
       setPreviewing(false);
     }
@@ -41,7 +41,8 @@ export function CustomSQL({ connection, sql, onSQLChange }: CustomSQLProps) {
     dataIndex: col.name,
     key: col.name,
     width: 150,
-    render: (v: unknown) => (v === null ? <Text type="quaternary">NULL</Text> : String(v)),
+    render: (v: unknown) =>
+      v === null ? <Text type="quaternary">NULL</Text> : String(v),
   }));
 
   return (
@@ -52,17 +53,18 @@ export function CustomSQL({ connection, sql, onSQLChange }: CustomSQLProps) {
         value={sql}
         onChange={(v) => onSQLChange(v)}
         placeholder="SELECT * FROM your_table WHERE ..."
-        autosize={{ minRows: 4, maxRows: 10 }}
-        style={{ fontFamily: "monospace", marginBottom: 12 }}
+        autosize={{ minRows: 3, maxRows: 8 }}
+        style={{ fontFamily: "monospace", fontSize: 12, marginBottom: 10 }}
       />
 
       <Button
         onClick={handlePreview}
         loading={previewing}
         disabled={!sql.trim()}
-        style={{ marginBottom: 16 }}
+        size="small"
+        style={{ marginBottom: 12 }}
       >
-        Preview (max 10 rows)
+        {"预览（最多 10 行）"}
       </Button>
 
       {preview && previewColumns && (
@@ -73,7 +75,6 @@ export function CustomSQL({ connection, sql, onSQLChange }: CustomSQLProps) {
           size="small"
           pagination={false}
           scroll={{ x: "max-content" }}
-          style={{ marginTop: 8 }}
         />
       )}
     </div>

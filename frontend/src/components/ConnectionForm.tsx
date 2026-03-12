@@ -1,25 +1,14 @@
-import { Button, Input, InputNumber, Spin, Typography } from "@douyinfe/semi-ui";
+import { Button, Input, InputNumber, Spin } from "@douyinfe/semi-ui";
 import { IconLink, IconTick } from "@douyinfe/semi-icons";
 import { useState } from "react";
 import { testConnection } from "../api/helper";
 import { ErrorBanner } from "./ErrorBanner";
 import type { ConnectionInfo } from "../types";
 
-const { Text } = Typography;
-
 interface ConnectionFormProps {
   connection: ConnectionInfo;
   onChange: (conn: ConnectionInfo) => void;
   onNext: () => void;
-}
-
-function FieldLabel({ text, required }: { text: string; required?: boolean }) {
-  return (
-    <div style={{ marginBottom: 4, marginTop: 12 }}>
-      {required && <Text type="danger">* </Text>}
-      <Text strong>{text}</Text>
-    </div>
-  );
 }
 
 export function ConnectionForm({
@@ -43,11 +32,11 @@ export function ConnectionForm({
         setTestResult("success");
       } else {
         setTestResult("error");
-        setError(result.message ?? "Connection failed");
+        setError(result.message ?? "连接失败");
       }
     } catch {
       setTestResult("error");
-      setError("Network error, cannot reach backend");
+      setError("网络错误，无法连接后端服务");
     } finally {
       setTesting(false);
     }
@@ -57,9 +46,7 @@ export function ConnectionForm({
     if (testResult === "success") {
       onNext();
     } else {
-      handleTest().then(() => {
-        // Check handled by state
-      });
+      handleTest().then(() => {});
     }
   };
 
@@ -82,67 +69,93 @@ export function ConnectionForm({
     <div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
 
-      <div style={{ padding: "0 4px" }}>
-        <FieldLabel text="Database Host" required />
-        <Input
-          placeholder="e.g. db.example.com (public IP or domain)"
-          value={connection.host}
-          onChange={(v) => updateField("host", v)}
-        />
+      <div className="form-row-inline">
+        <div className="form-row">
+          <label className="form-label">
+            <span className="required">*</span>
+            {"主机地址"}
+          </label>
+          <Input
+            placeholder="例如 db.example.com"
+            value={connection.host}
+            onChange={(v) => updateField("host", v)}
+            size="default"
+          />
+        </div>
+        <div className="form-row">
+          <label className="form-label">
+            <span className="required">*</span>
+            {"端口"}
+          </label>
+          <InputNumber
+            value={connection.port}
+            onChange={(v) => updateField("port", v as number)}
+            min={1}
+            max={65535}
+            style={{ width: "100%" }}
+            size="default"
+          />
+        </div>
+      </div>
 
-        <FieldLabel text="Port" required />
-        <InputNumber
-          placeholder="5432"
-          value={connection.port}
-          onChange={(v) => updateField("port", v as number)}
-          min={1}
-          max={65535}
-          style={{ width: "100%" }}
-        />
-
-        <FieldLabel text="Username" required />
+      <div className="form-row">
+        <label className="form-label">
+          <span className="required">*</span>
+          {"用户名"}
+        </label>
         <Input
-          placeholder="Recommend using a read-only user"
+          placeholder="建议使用只读用户"
           value={connection.username}
           onChange={(v) => updateField("username", v)}
-        />
-
-        <FieldLabel text="Password" required />
-        <Input
-          placeholder="Enter password"
-          mode="password"
-          value={connection.password}
-          onChange={(v) => updateField("password", v)}
-        />
-
-        <FieldLabel text="Database" required />
-        <Input
-          placeholder="Database name"
-          value={connection.database}
-          onChange={(v) => updateField("database", v)}
+          size="default"
         />
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: 24,
-        }}
-      >
+      <div className="form-row">
+        <label className="form-label">
+          <span className="required">*</span>
+          {"密码"}
+        </label>
+        <Input
+          placeholder="输入密码"
+          mode="password"
+          value={connection.password}
+          onChange={(v) => updateField("password", v)}
+          size="default"
+        />
+      </div>
+
+      <div className="form-row">
+        <label className="form-label">
+          <span className="required">*</span>
+          {"数据库名"}
+        </label>
+        <Input
+          placeholder="输入数据库名称"
+          value={connection.database}
+          onChange={(v) => updateField("database", v)}
+          size="default"
+        />
+      </div>
+
+      <div className="footer-actions">
         <Button
           icon={testing ? <Spin size="small" /> : <IconLink />}
           onClick={handleTest}
           disabled={!isFormComplete || testing}
         >
-          {testResult === "success" ? "Connected" : "Test Connection"}
-          {testResult === "success" && (
-            <IconTick
-              style={{
-                marginLeft: 4,
-                color: "var(--semi-color-success)",
-              }}
-            />
+          {testResult === "success" ? (
+            <>
+              {"已连接"}
+              <IconTick
+                style={{
+                  marginLeft: 4,
+                  color: "var(--semi-color-success)",
+                }}
+              />
+            </>
+          ) : (
+            "测试连接"
           )}
         </Button>
 
@@ -151,7 +164,7 @@ export function ConnectionForm({
           onClick={handleNext}
           disabled={!isFormComplete || testing}
         >
-          Next
+          {"下一步"}
         </Button>
       </div>
     </div>

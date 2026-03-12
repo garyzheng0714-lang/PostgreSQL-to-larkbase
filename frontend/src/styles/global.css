@@ -1,11 +1,131 @@
 body {
   margin: 0;
-  padding: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
   background: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100vh;
+}
+
+.step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 16px 0 20px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--semi-color-text-2);
+  white-space: nowrap;
+}
+
+.step-item.active {
+  color: var(--semi-color-primary);
+  font-weight: 600;
+}
+
+.step-item.done {
+  color: var(--semi-color-success);
+}
+
+.step-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: var(--semi-color-fill-1);
+  color: var(--semi-color-text-2);
+}
+
+.step-item.active .step-dot {
+  background: var(--semi-color-primary);
+  color: #fff;
+}
+
+.step-item.done .step-dot {
+  background: var(--semi-color-success);
+  color: #fff;
+}
+
+.step-line {
+  width: 32px;
+  height: 1px;
+  background: var(--semi-color-border);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.form-row {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--semi-color-text-0);
+  margin-bottom: 4px;
+}
+
+.form-label .required {
+  color: var(--semi-color-danger);
+  margin-right: 2px;
+}
+
+.form-row-inline {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 12px;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--semi-color-border);
+}
+
+.config-summary-card {
+  background: var(--semi-color-fill-0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.config-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.config-summary-row .label {
+  color: var(--semi-color-text-2);
+}
+
+.config-summary-row .value {
+  color: var(--semi-color-text-0);
+  font-weight: 500;
+  max-width: 60%;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

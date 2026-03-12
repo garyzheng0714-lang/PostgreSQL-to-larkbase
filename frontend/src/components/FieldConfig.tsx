@@ -91,13 +91,11 @@ export function FieldConfig({
           <Checkbox
             checked={selectAll}
             onChange={(e) => handleSelectAll(e.target.checked ?? false)}
-          >
-            All
-          </Checkbox>
+          />
         ),
         dataIndex: "select",
         key: "select",
-        width: 70,
+        width: 44,
         render: (_: unknown, record: ColumnInfo) => (
           <Checkbox
             checked={isSelected(record.name)}
@@ -106,31 +104,64 @@ export function FieldConfig({
         ),
       },
       {
-        title: "Column",
+        title: "列名",
         dataIndex: "name",
         key: "name",
-        width: 140,
-        render: (name: string) => <Text strong>{name}</Text>,
+        width: 110,
+        render: (name: string) => (
+          <Text
+            strong
+            style={{
+              fontSize: 13,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "block",
+            }}
+            title={name}
+          >
+            {name}
+          </Text>
+        ),
       },
       {
-        title: "PG Type",
-        dataIndex: "data_type",
-        key: "data_type",
-        width: 120,
-        render: (v: string) => <Tag size="small">{v}</Tag>,
+        title: "原始类型",
+        dataIndex: "udt_name",
+        key: "udt_name",
+        width: 90,
+        render: (_: unknown, record: ColumnInfo) => (
+          <Tag
+            size="small"
+            color="blue"
+            style={{
+              fontSize: 11,
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "inline-block",
+            }}
+          >
+            {record.udt_name || record.data_type}
+          </Tag>
+        ),
       },
       {
-        title: "Bitable Type",
+        title: "多维表格类型",
         dataIndex: "bitable_type",
         key: "bitable_type",
-        width: 100,
-        render: (v: number) => BITABLE_TYPE_LABELS[v] ?? "Text",
+        width: 70,
+        render: (v: number) => (
+          <span style={{ fontSize: 13 }}>
+            {BITABLE_TYPE_LABELS[v] ?? "文本"}
+          </span>
+        ),
       },
       {
-        title: "Display Name",
+        title: "显示名",
         dataIndex: "display_name",
         key: "display_name",
-        width: 160,
+        width: 130,
         render: (_: unknown, record: ColumnInfo) => (
           <Input
             size="small"
@@ -141,10 +172,10 @@ export function FieldConfig({
         ),
       },
       {
-        title: "Decimals",
+        title: "小数位",
         dataIndex: "precision",
         key: "precision",
-        width: 90,
+        width: 70,
         render: (_: unknown, record: ColumnInfo) => {
           if (record.bitable_type !== 2 && record.bitable_type !== 8) {
             return <Text type="quaternary">-</Text>;
@@ -158,14 +189,14 @@ export function FieldConfig({
               }
               min={0}
               max={10}
-              style={{ width: 70 }}
+              style={{ width: 56 }}
             />
           );
         },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columns, selectedFields, fieldRenames, numberFormats, selectAll]
+    [columns, selectedFields, fieldRenames, numberFormats, selectAll],
   );
 
   const selectedCount =
@@ -173,15 +204,27 @@ export function FieldConfig({
 
   return (
     <div>
-      <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          marginBottom: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
         <Switch
           checked={selectAll}
           onChange={handleSelectAll}
-          style={{ marginRight: 8 }}
+          size="small"
         />
-        <Text>Include all fields (including future additions)</Text>
-        <Text type="tertiary" style={{ marginLeft: 12 }}>
-          {selectedCount} / {columns.length} fields selected
+        <Text style={{ fontSize: 13 }}>
+          {"全部字段（含未来新增）"}
+        </Text>
+        <Text
+          type="tertiary"
+          style={{ fontSize: 12, marginLeft: "auto" }}
+        >
+          {`已选 ${selectedCount}/${columns.length}`}
         </Text>
       </div>
 
@@ -191,23 +234,18 @@ export function FieldConfig({
         rowKey="name"
         size="small"
         pagination={false}
-        scroll={{ y: 320 }}
+        scroll={{ y: 280 }}
+        style={{ tableLayout: "fixed" }}
       />
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: 24,
-        }}
-      >
-        <Button onClick={onBack}>Back</Button>
+      <div className="footer-actions">
+        <Button onClick={onBack}>{"上一步"}</Button>
         <Button
           theme="solid"
           onClick={onNext}
           disabled={selectedCount === 0}
         >
-          Next
+          {"下一步"}
         </Button>
       </div>
     </div>

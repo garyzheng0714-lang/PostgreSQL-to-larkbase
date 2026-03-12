@@ -8,11 +8,23 @@ SHA1(timestamp + nonce + secretKey + body).hex() for request signing.
 import hashlib
 import logging
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
 from src.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class ConnectorAuthError(Exception):
+    """Raised when request signature verification fails.
+
+    Args:
+        error_key: Key into ERRORS dict for bilingual error message.
+    """
+
+    def __init__(self, error_key: str = "SIGNATURE_INVALID") -> None:
+        self.error_key = error_key
+        super().__init__(error_key)
 
 
 def verify_signature(
@@ -60,6 +72,10 @@ async def validate_request_signature(request: Request) -> bytes:
         HTTPException: 403 if signature is present but invalid.
     """
     body = await request.body()
+    logger.info(
+        "Incoming %s %s (body=%d bytes)",
+        request.method, request.url.path, len(body),
+    )
     timestamp = request.headers.get("X-Base-Request-Timestamp", "")
     nonce = request.headers.get("X-Base-Request-Nonce", "")
     signature = request.headers.get("X-Base-Signature", "")
@@ -67,8 +83,11 @@ async def validate_request_signature(request: Request) -> bytes:
     if not all([timestamp, nonce, signature]):
         if settings.secret_key == "testBase":
             return body
-        logger.warning("Missing signature headers in request")
-        raise HTTPException(status_code=403, detail="Missing signature headers")
+        logger.warning(
+            "Missing signature headers: ts=%r nonce=%r sig=%r",
+            bool(timestamp), bool(nonce), bool(signature),
+        )
+        raise ConnectorAuthError("SIGNATURE_INVALID")
 
     is_valid = verify_signature(
         timestamp=timestamp,
@@ -79,7 +98,11 @@ async def validate_request_signature(request: Request) -> bytes:
     )
 
     if not is_valid:
-        logger.warning("Invalid request signature detected")
-        raise HTTPException(status_code=403, detail="Invalid signature")
+        logger.warning(
+            "Invalid signature for %s %s",
+            request.method, request.url.path,
+        )
+        raise ConnectorAuthError("SIGNATURE_INVALID")
 
+    logger.info("Signature verified for %s %s", request.method, request.url.path)
     return body

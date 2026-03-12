@@ -9,12 +9,12 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
 
 from src.middleware.signature import validate_request_signature
-from src.models.datasource import DatasourceConfig
 from src.models.error import ERRORS
 from src.models.response import FieldMeta, FieldProperty, TableMetaData
 from src.services import pg_service
 from src.services.type_mapper import can_be_primary, map_pg_type
 from src.utils.id_generator import make_field_id
+from src.utils.params_parser import parse_feishu_params
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -47,13 +47,7 @@ async def table_meta(
         return _build_error_response("UNKNOWN_ERROR")
 
     try:
-        params = orjson.loads(payload.get("params", "{}"))
-        ds_config_raw = params.get("datasourceConfig", "{}")
-        if isinstance(ds_config_raw, str):
-            ds_config_data = orjson.loads(ds_config_raw)
-        else:
-            ds_config_data = ds_config_raw
-        config = DatasourceConfig(**ds_config_data)
+        config, params = parse_feishu_params(payload)
     except Exception:
         logger.exception("Failed to parse datasource config")
         return _build_error_response("CONNECTION_FAILED")

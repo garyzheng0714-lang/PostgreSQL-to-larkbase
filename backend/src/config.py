@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     pg_connect_timeout: int = 5
     pg_query_timeout: int = 15
     max_row_limit: int = 50000
+    log_level: str = "INFO"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

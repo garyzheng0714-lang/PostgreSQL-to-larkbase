@@ -1,24 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DatasourceConfig } from "../types";
 
-interface BitableSDK {
-  getConfig: () => Promise<Record<string, string>>;
-  saveConfigAndGoNext: (
-    config: Record<string, string>,
-  ) => Promise<void>;
-  getUserId: () => Promise<string>;
-  getTenantKey: () => Promise<string>;
-}
+type BitableApp =
+  typeof import("@lark-base-open/connector-api")["bitable"];
 
 export function useBitable() {
-  const sdkRef = useRef<BitableSDK | null>(null);
+  const sdkRef = useRef<BitableApp | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     import("@lark-base-open/connector-api")
       .then((mod) => {
-        sdkRef.current = mod.bitable as unknown as BitableSDK;
+        sdkRef.current = mod.bitable;
         setReady(true);
+
+        mod.bitable.bridge
+          .getTheme()
+          .then((theme) => {
+            applyTheme(theme === "DARK");
+          })
+          .catch(() => {});
+
+        mod.bitable.bridge.onThemeChange((ev) => {
+          applyTheme(ev.data.theme === "DARK");
+        });
       })
       .catch(() => {
         setReady(true);
@@ -32,7 +37,7 @@ export function useBitable() {
         const raw = await sdkRef.current.getConfig();
         if (raw?.datasourceConfig) {
           return JSON.parse(
-            raw.datasourceConfig,
+            String(raw.datasourceConfig),
           ) as DatasourceConfig;
         }
       } catch {
@@ -44,9 +49,7 @@ export function useBitable() {
   const saveConfig = useCallback(
     async (config: DatasourceConfig): Promise<void> => {
       if (!sdkRef.current) {
-        alert(
-          "Config saved (dev mode). In Bitable this closes the window.",
-        );
+        console.log("[dev] config saved:", config);
         return;
       }
       await sdkRef.current.saveConfigAndGoNext({
@@ -56,5 +59,28 @@ export function useBitable() {
     [],
   );
 
-  return { ready, getExistingConfig, saveConfig };
+  const resizeContainer = useCallback(
+    async (width: number, height: number): Promise<void> => {
+      if (!sdkRef.current) return;
+      try {
+        await sdkRef.current.ui.setHostContainerDetailSize({
+          width,
+          height,
+        });
+      } catch {
+        // Resize not supported in some environments
+      }
+    },
+    [],
+  );
+
+  return { ready, getExistingConfig, saveConfig, resizeContainer };
+}
+
+function applyTheme(isDark: boolean): void {
+  if (isDark) {
+    document.body.setAttribute("theme-mode", "dark");
+  } else {
+    document.body.removeAttribute("theme-mode");
+  }
 }

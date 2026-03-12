@@ -1,4 +1,4 @@
-import { Button, Descriptions, Spin, Switch, Typography } from "@douyinfe/semi-ui";
+import { Button, Spin, Switch, Typography } from "@douyinfe/semi-ui";
 import { useState } from "react";
 import { ErrorBanner } from "./ErrorBanner";
 import type { DatasourceConfig } from "../types";
@@ -29,7 +29,7 @@ export function SyncSettings({
     try {
       await onSave({ ...config, auto_sync: autoSync });
     } catch {
-      setError("Failed to save configuration");
+      setError("保存配置失败");
     } finally {
       setSaving(false);
     }
@@ -37,27 +37,27 @@ export function SyncSettings({
 
   const fieldCount =
     config.selected_fields === null
-      ? "All (including future)"
-      : `${config.selected_fields.length} fields`;
+      ? "全部（含未来新增）"
+      : `${config.selected_fields.length} 个字段`;
 
   const renameCount = config.field_renames
     ? Object.keys(config.field_renames).length
     : 0;
 
-  const summaryData = [
-    { key: "Host", value: `${config.host}:${config.port}` },
-    { key: "Database", value: config.database },
+  const summaryRows = [
+    { label: "主机", value: `${config.host}:${config.port}` },
+    { label: "数据库", value: config.database },
     {
-      key: "Data Source",
+      label: "数据源",
       value:
         config.mode === "table"
           ? `${config.schema_name}.${config.table_name}`
-          : "Custom SQL",
+          : "自定义 SQL",
     },
-    { key: "Fields", value: fieldCount },
+    { label: "同步字段", value: fieldCount },
     {
-      key: "Renamed Fields",
-      value: renameCount > 0 ? `${renameCount} fields` : "None",
+      label: "重命名",
+      value: renameCount > 0 ? `${renameCount} 个字段` : "无",
     },
   ];
 
@@ -65,20 +65,30 @@ export function SyncSettings({
     <div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
 
-      <Descriptions data={summaryData} style={{ marginBottom: 24 }} />
+      <div className="config-summary-card">
+        {summaryRows.map((row) => (
+          <div key={row.label} className="config-summary-row">
+            <span className="label">{row.label}</span>
+            <span className="value" title={row.value}>
+              {row.value}
+            </span>
+          </div>
+        ))}
+      </div>
 
       {config.mode === "sql" && config.custom_sql && (
         <div
           style={{
             background: "var(--semi-color-fill-0)",
-            padding: 12,
+            padding: 10,
             borderRadius: 6,
-            marginBottom: 16,
+            marginBottom: 14,
             fontFamily: "monospace",
             fontSize: 12,
-            maxHeight: 120,
+            maxHeight: 100,
             overflow: "auto",
             whiteSpace: "pre-wrap",
+            color: "var(--semi-color-text-1)",
           }}
         >
           {config.custom_sql}
@@ -89,35 +99,31 @@ export function SyncSettings({
         style={{
           display: "flex",
           alignItems: "center",
-          marginBottom: 24,
-          padding: "12px 16px",
+          gap: 10,
+          padding: "10px 14px",
           background: "var(--semi-color-fill-0)",
-          borderRadius: 6,
+          borderRadius: 8,
         }}
       >
         <Switch
           checked={autoSync}
           onChange={onAutoSyncChange}
-          style={{ marginRight: 12 }}
+          size="small"
         />
         <div>
-          <Text strong>Auto Sync</Text>
+          <Text strong style={{ fontSize: 13 }}>
+            {"自动同步"}
+          </Text>
           <br />
-          <Text type="tertiary" size="small">
-            Automatically sync data every hour
+          <Text type="tertiary" style={{ fontSize: 12 }}>
+            {"每小时自动同步一次数据"}
           </Text>
         </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: 24,
-        }}
-      >
+      <div className="footer-actions">
         <Button onClick={onBack} disabled={saving}>
-          Back
+          {"上一步"}
         </Button>
         <Button
           theme="solid"
@@ -126,7 +132,7 @@ export function SyncSettings({
           disabled={saving}
           icon={saving ? <Spin size="small" /> : undefined}
         >
-          {saving ? "Saving..." : "Save & Start Sync"}
+          {saving ? "保存中..." : "保存并开始同步"}
         </Button>
       </div>
     </div>

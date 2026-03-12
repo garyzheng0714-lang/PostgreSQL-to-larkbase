@@ -1,4 +1,3 @@
-import { Card, Typography } from "@douyinfe/semi-ui";
 import { useEffect } from "react";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { FieldConfig } from "./components/FieldConfig";
@@ -7,8 +6,6 @@ import { SyncSettings } from "./components/SyncSettings";
 import { TableSelector } from "./components/TableSelector";
 import { useBitable } from "./hooks/useBitable";
 import { useConfig } from "./hooks/useConfig";
-
-const { Title } = Typography;
 
 export default function App() {
   const bitable = useBitable();
@@ -21,9 +18,21 @@ export default function App() {
         config.loadFromConfig(existing);
       }
     });
-    // Run when SDK becomes ready
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bitable.ready]);
+
+  const STEP_HEIGHTS: Record<string, number> = {
+    connection: 420,
+    table: 500,
+    fields: 580,
+    confirm: 400,
+  };
+
+  useEffect(() => {
+    const height = STEP_HEIGHTS[config.stepKey] ?? 520;
+    bitable.resizeContainer(620, height);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.stepKey]);
 
   const handleSave = async () => {
     const finalConfig = config.buildConfig();
@@ -31,22 +40,7 @@ export default function App() {
   };
 
   return (
-    <Card
-      style={{
-        maxWidth: 680,
-        margin: "0 auto",
-        padding: "8px 0",
-        minHeight: 400,
-      }}
-      bodyStyle={{ padding: "16px 24px" }}
-    >
-      <Title
-        heading={5}
-        style={{ marginBottom: 20, textAlign: "center" }}
-      >
-        PostgreSQL Data Sync
-      </Title>
-
+    <div style={{ maxWidth: 620, margin: "0 auto", padding: "12px 20px" }}>
       <StepIndicator current={config.currentStep} />
 
       {config.stepKey === "connection" && (
@@ -97,6 +91,6 @@ export default function App() {
           onBack={config.goBack}
         />
       )}
-    </Card>
+    </div>
   );
 }

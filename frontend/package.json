@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@douyinfe/semi-ui": "^2.76.0",
-    "@lark-base-open/connector-api": "latest",
+    "@lark-base-open/connector-api": "^0.1.1",
     "axios": "^1.7.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
