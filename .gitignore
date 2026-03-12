@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+test_outputs/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Uploads
+.codepilot-uploads/
+.playwright-mcp/
+
+# Plans
+.claude/plans/
+
+# Screenshots
+*.png
+!frontend/public/*.png
