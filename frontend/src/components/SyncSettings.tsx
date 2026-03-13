@@ -1,5 +1,5 @@
 import { Button, Spin, Switch, Typography } from "@douyinfe/semi-ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ErrorBanner } from "./ErrorBanner";
 import type { DatasourceConfig } from "../types";
 
@@ -22,14 +22,18 @@ export function SyncSettings({
 }: SyncSettingsProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const savingRef = useRef(false);
 
   const handleSave = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
       await onSave({ ...config, auto_sync: autoSync });
     } catch {
       setError("保存配置失败");
+      savingRef.current = false;
     } finally {
       setSaving(false);
     }
