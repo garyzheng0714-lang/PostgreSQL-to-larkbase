@@ -18,16 +18,14 @@ def make_field_id(column_name: str) -> str:
         Safe fieldID string.
     """
     sanitized = _UNSAFE_CHARS.sub("_", column_name)
-    if not sanitized or not sanitized[0].isalpha():
-        sanitized = f"f_{sanitized}"
-    sanitized = sanitized.strip("_")
-    if not sanitized:
-        sanitized = f"f_{hashlib.md5(column_name.encode()).hexdigest()[:8]}"
-    if len(sanitized) > 50:
-        prefix = sanitized[:42]
+    stripped = sanitized.strip("_")
+    if not stripped or not stripped[0].isalpha():
+        stripped = f"f_{hashlib.md5(column_name.encode()).hexdigest()[:12]}"
+    if len(stripped) > 50:
+        prefix = stripped[:42]
         suffix = hashlib.md5(column_name.encode()).hexdigest()[:7]
-        sanitized = f"{prefix}_{suffix}"
-    return sanitized
+        stripped = f"{prefix}_{suffix}"
+    return stripped
 
 
 def make_primary_id(row_pk: object) -> str:
