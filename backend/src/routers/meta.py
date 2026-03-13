@@ -17,7 +17,7 @@ async def get_meta() -> dict[str, object]:
     """
     return {
         "schemaVersion": 1,
-        "version": "1.0.0",
+        "version": "1.1.0",
         "type": "data_connector",
         "extraData": {
             "disabledPeriodicSync": False,
