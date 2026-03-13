@@ -1,15 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BatchTableSelector } from "./components/BatchTableSelector";
 import { ConnectionForm } from "./components/ConnectionForm";
-import { FieldConfig } from "./components/FieldConfig";
 import { StepIndicator } from "./components/StepIndicator";
-import { SyncSettings } from "./components/SyncSettings";
-import { TableSelector } from "./components/TableSelector";
 import { useBitable } from "./hooks/useBitable";
 import { useConfig } from "./hooks/useConfig";
 
 export default function App() {
   const bitable = useBitable();
   const config = useConfig();
+  const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     if (!bitable.ready) return;
@@ -22,10 +22,8 @@ export default function App() {
   }, [bitable.ready]);
 
   const STEP_HEIGHTS: Record<string, number> = {
-    connection: 420,
-    table: 500,
-    fields: 580,
-    confirm: 400,
+    connection: 340,
+    tables: 520,
   };
 
   useEffect(() => {
@@ -34,9 +32,20 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.stepKey]);
 
-  const handleSave = async () => {
-    const finalConfig = config.buildConfig();
-    await bitable.saveConfig(finalConfig);
+  const handleSync = async () => {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    setSyncing(true);
+
+    try {
+      const configs = config.buildConfigs();
+      for (const cfg of configs) {
+        await bitable.saveConfig(cfg);
+      }
+    } finally {
+      setSyncing(false);
+      syncingRef.current = false;
+    }
   };
 
   return (
@@ -47,48 +56,23 @@ export default function App() {
         <ConnectionForm
           connection={config.connection}
           onChange={config.setConnection}
+          selectedDatabases={config.selectedDatabases}
+          onSelectedDatabasesChange={config.setSelectedDatabases}
+          showAdvanced={config.showAdvanced}
+          onShowAdvancedChange={config.setShowAdvanced}
           onNext={config.goNext}
         />
       )}
 
-      {config.stepKey === "table" && (
-        <TableSelector
+      {config.stepKey === "tables" && (
+        <BatchTableSelector
           connection={config.connection}
-          mode={config.mode}
-          onModeChange={config.setMode}
-          schemaName={config.schemaName}
-          onSchemaChange={config.setSchemaName}
-          tableName={config.tableName}
-          onTableChange={config.setTableName}
-          customSQL={config.customSQL}
-          onCustomSQLChange={config.setCustomSQL}
-          onColumnsLoaded={config.setColumns}
-          onNext={config.goNext}
+          selectedDatabases={config.selectedDatabases}
+          selectedTables={config.selectedTables}
+          onSelectedTablesChange={config.setSelectedTables}
           onBack={config.goBack}
-        />
-      )}
-
-      {config.stepKey === "fields" && (
-        <FieldConfig
-          columns={config.columns}
-          selectedFields={config.selectedFields}
-          onSelectedFieldsChange={config.setSelectedFields}
-          fieldRenames={config.fieldRenames}
-          onFieldRenamesChange={config.setFieldRenames}
-          numberFormats={config.numberFormats}
-          onNumberFormatsChange={config.setNumberFormats}
-          onNext={config.goNext}
-          onBack={config.goBack}
-        />
-      )}
-
-      {config.stepKey === "confirm" && (
-        <SyncSettings
-          config={config.buildConfig()}
-          autoSync={config.autoSync}
-          onAutoSyncChange={config.setAutoSync}
-          onSave={handleSave}
-          onBack={config.goBack}
+          onSync={handleSync}
+          syncing={syncing}
         />
       )}
     </div>

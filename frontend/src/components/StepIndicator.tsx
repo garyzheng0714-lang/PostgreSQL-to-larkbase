@@ -2,7 +2,7 @@ interface StepIndicatorProps {
   current: number;
 }
 
-const STEPS = ["连接", "数据源", "字段", "确认"];
+const STEPS = ["连接", "选择表"];
 
 export function StepIndicator({ current }: StepIndicatorProps) {
   return (

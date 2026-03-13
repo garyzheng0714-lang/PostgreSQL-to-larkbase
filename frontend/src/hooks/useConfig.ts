@@ -1,38 +1,30 @@
 import { useCallback, useState } from "react";
 import type {
-  ColumnInfo,
+  BatchSyncItem,
   ConnectionInfo,
   DatasourceConfig,
-  NumberFormat,
   StepKey,
 } from "../types";
 
-const STEPS: StepKey[] = ["connection", "table", "fields", "confirm"];
+const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST ?? "112.124.103.65";
+const DEFAULT_PORT = Number(import.meta.env.VITE_DEFAULT_PORT ?? 5433);
+const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME ?? "postgres";
+const DEFAULT_SCHEMA = import.meta.env.VITE_DEFAULT_SCHEMA ?? "public";
+
+const STEPS: StepKey[] = ["connection", "tables"];
 
 export function useConfig() {
   const [currentStep, setCurrentStep] = useState(0);
   const [connection, setConnection] = useState<ConnectionInfo>({
-    host: "",
-    port: 5432,
-    username: "",
+    host: DEFAULT_HOST,
+    port: DEFAULT_PORT,
+    username: DEFAULT_USERNAME,
     password: "",
     database: "",
   });
-  const [mode, setMode] = useState<"table" | "sql">("table");
-  const [schemaName, setSchemaName] = useState("public");
-  const [tableName, setTableName] = useState<string | null>(null);
-  const [customSQL, setCustomSQL] = useState<string>("");
-  const [selectedFields, setSelectedFields] = useState<string[] | null>(
-    null
-  );
-  const [columns, setColumns] = useState<ColumnInfo[]>([]);
-  const [fieldRenames, setFieldRenames] = useState<Record<string, string>>(
-    {}
-  );
-  const [numberFormats, setNumberFormats] = useState<
-    Record<string, NumberFormat>
-  >({});
-  const [autoSync, setAutoSync] = useState(true);
+  const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
+  const [selectedTables, setSelectedTables] = useState<BatchSyncItem[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const stepKey = STEPS[currentStep];
 
@@ -44,31 +36,23 @@ export function useConfig() {
     setCurrentStep((s) => Math.max(s - 1, 0));
   }, []);
 
-  const buildConfig = useCallback((): DatasourceConfig => {
-    return {
-      ...connection,
-      mode,
-      schema_name: schemaName,
-      table_name: tableName,
-      selected_fields: selectedFields,
-      custom_sql: mode === "sql" ? customSQL : null,
-      field_renames:
-        Object.keys(fieldRenames).length > 0 ? fieldRenames : null,
-      number_formats:
-        Object.keys(numberFormats).length > 0 ? numberFormats : null,
-      auto_sync: autoSync,
-    };
-  }, [
-    connection,
-    mode,
-    schemaName,
-    tableName,
-    selectedFields,
-    customSQL,
-    fieldRenames,
-    numberFormats,
-    autoSync,
-  ]);
+  const buildConfigs = useCallback((): DatasourceConfig[] => {
+    return selectedTables.map((item) => ({
+      host: connection.host,
+      port: connection.port,
+      username: connection.username,
+      password: connection.password,
+      database: item.database,
+      mode: "table" as const,
+      schema_name: DEFAULT_SCHEMA,
+      table_name: item.tableName,
+      selected_fields: null,
+      custom_sql: null,
+      field_renames: null,
+      number_formats: null,
+      auto_sync: true,
+    }));
+  }, [connection, selectedTables]);
 
   const loadFromConfig = useCallback((config: DatasourceConfig) => {
     setConnection({
@@ -78,14 +62,18 @@ export function useConfig() {
       password: config.password,
       database: config.database,
     });
-    setMode(config.mode);
-    setSchemaName(config.schema_name);
-    setTableName(config.table_name);
-    setCustomSQL(config.custom_sql ?? "");
-    setSelectedFields(config.selected_fields);
-    setFieldRenames(config.field_renames ?? {});
-    setNumberFormats(config.number_formats ?? {});
-    setAutoSync(config.auto_sync);
+    if (config.database) {
+      setSelectedDatabases([config.database]);
+    }
+    if (config.table_name) {
+      setSelectedTables([
+        {
+          database: config.database,
+          tableName: config.table_name,
+          tableType: "table",
+        },
+      ]);
+    }
   }, []);
 
   return {
@@ -93,27 +81,15 @@ export function useConfig() {
     stepKey,
     connection,
     setConnection,
-    mode,
-    setMode,
-    schemaName,
-    setSchemaName,
-    tableName,
-    setTableName,
-    customSQL,
-    setCustomSQL,
-    selectedFields,
-    setSelectedFields,
-    columns,
-    setColumns,
-    fieldRenames,
-    setFieldRenames,
-    numberFormats,
-    setNumberFormats,
-    autoSync,
-    setAutoSync,
+    selectedDatabases,
+    setSelectedDatabases,
+    selectedTables,
+    setSelectedTables,
+    showAdvanced,
+    setShowAdvanced,
     goNext,
     goBack,
-    buildConfig,
+    buildConfigs,
     loadFromConfig,
   };
 }

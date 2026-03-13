@@ -40,12 +40,18 @@ export interface DatasourceConfig {
   auto_sync: boolean;
 }
 
+export interface BatchSyncItem {
+  database: string;
+  tableName: string;
+  tableType: "table" | "view";
+}
+
 export interface SQLPreviewResult {
   columns: { name: string; data_type: string }[];
   rows: Record<string, unknown>[];
 }
 
-export type StepKey = "connection" | "table" | "fields" | "confirm";
+export type StepKey = "connection" | "tables";
 
 export const BITABLE_TYPE_LABELS: Record<number, string> = {
   1: "文本",
