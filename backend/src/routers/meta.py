@@ -1,11 +1,15 @@
 """GET /meta.json endpoint - Plugin metadata for Feishu Bitable."""
 
+import time
+
 from fastapi import APIRouter
 from fastapi.responses import ORJSONResponse
 
 from src.config import settings
 
 router = APIRouter()
+
+APP_VERSION = "1.2.0"
 
 
 @router.get("/meta.json", response_class=ORJSONResponse)
@@ -15,14 +19,15 @@ async def get_meta() -> dict[str, object]:
     Returns:
         Plugin metadata including frontend URL, API paths, and display settings.
     """
+    cache_bust = int(time.time())
     return {
         "schemaVersion": 1,
-        "version": "1.1.0",
+        "version": APP_VERSION,
         "type": "data_connector",
         "extraData": {
             "disabledPeriodicSync": False,
-            "dataSourceConfigUiUri": settings.frontend_url,
-            "initHeight": 520,
+            "dataSourceConfigUiUri": f"{settings.frontend_url}?v={cache_bust}",
+            "initHeight": 340,
             "initWidth": 620,
         },
         "protocol": {
