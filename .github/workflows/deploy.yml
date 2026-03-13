@@ -11,7 +11,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -45,17 +45,8 @@ jobs:
             root@${{ secrets.SERVER_HOST }}:/opt/pg2bitable/frontend/dist/
 
       # -- Deploy Backend & Rebuild --
-      - name: Deploy backend and restart
+      - name: Sync backend source
         run: |
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-          set -e
-          cd /opt/pg2bitable
-
-          # Sync backend source (exclude env and cache)
-          echo "Pulling latest backend code..."
-          ENDSSH
-
-          # rsync backend source to server
           rsync -avz --delete \
             --exclude='.env*' \
             --exclude='__pycache__' \
@@ -64,12 +55,13 @@ jobs:
             backend/ \
             root@${{ secrets.SERVER_HOST }}:/opt/pg2bitable/backend/
 
-          # Rebuild and restart docker
+      - name: Rebuild and restart backend
+        run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
           set -e
           cd /opt/pg2bitable
           echo "Rebuilding backend container..."
-          docker compose build --no-cache backend
+          docker compose build backend
           docker compose up -d backend
           echo "Waiting for health check..."
           sleep 5
