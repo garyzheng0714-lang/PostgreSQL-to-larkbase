@@ -63,22 +63,19 @@ jobs:
           echo "Rebuilding backend container..."
           docker compose build backend
           docker compose up -d backend
-          echo "Waiting for health check..."
-          sleep 5
-          if docker inspect pg2bitable-backend --format '{{.State.Health.Status}}' | grep -q healthy; then
-            echo "Deploy successful - container is healthy"
-          else
-            echo "Warning: container not yet healthy, checking logs..."
-            docker logs pg2bitable-backend --tail 20
-            # Give it more time
-            sleep 10
-            if docker inspect pg2bitable-backend --format '{{.State.Health.Status}}' | grep -q healthy; then
-              echo "Deploy successful - container is healthy (delayed)"
-            else
-              echo "Deploy may have issues - check manually"
-              exit 1
+          echo "Waiting for container to be healthy..."
+          for i in $(seq 1 12); do
+            STATUS=$(docker inspect pg2bitable-backend --format '{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
+            echo "  Attempt $i/12: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Deploy successful - container is healthy"
+              exit 0
             fi
-          fi
+            sleep 5
+          done
+          echo "Container did not become healthy in 60s"
+          docker logs pg2bitable-backend --tail 20
+          exit 1
           ENDSSH
 
       # -- Verify --
