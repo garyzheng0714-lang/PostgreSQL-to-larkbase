@@ -1,0 +1,102 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # -- Frontend Build --
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install & build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      # -- SSH Setup --
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      # -- Deploy Frontend --
+      - name: Deploy frontend static files
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            frontend/dist/ \
+            root@${{ secrets.SERVER_HOST }}:/opt/pg2bitable/frontend/dist/
+
+      # -- Deploy Backend & Rebuild --
+      - name: Deploy backend and restart
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          set -e
+          cd /opt/pg2bitable
+
+          # Sync backend source (exclude env and cache)
+          echo "Pulling latest backend code..."
+          ENDSSH
+
+          # rsync backend source to server
+          rsync -avz --delete \
+            --exclude='.env*' \
+            --exclude='__pycache__' \
+            --exclude='.venv' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            backend/ \
+            root@${{ secrets.SERVER_HOST }}:/opt/pg2bitable/backend/
+
+          # Rebuild and restart docker
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          set -e
+          cd /opt/pg2bitable
+          echo "Rebuilding backend container..."
+          docker compose build --no-cache backend
+          docker compose up -d backend
+          echo "Waiting for health check..."
+          sleep 5
+          if docker inspect pg2bitable-backend --format '{{.State.Health.Status}}' | grep -q healthy; then
+            echo "Deploy successful - container is healthy"
+          else
+            echo "Warning: container not yet healthy, checking logs..."
+            docker logs pg2bitable-backend --tail 20
+            # Give it more time
+            sleep 10
+            if docker inspect pg2bitable-backend --format '{{.State.Health.Status}}' | grep -q healthy; then
+              echo "Deploy successful - container is healthy (delayed)"
+            else
+              echo "Deploy may have issues - check manually"
+              exit 1
+            fi
+          fi
+          ENDSSH
+
+      # -- Verify --
+      - name: Verify deployment
+        run: |
+          sleep 3
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://pg2bitable.garyzheng.com/meta.json)
+          if [ "$STATUS" = "200" ]; then
+            echo "Deployment verified - site is live"
+          else
+            echo "Warning: got HTTP $STATUS from site"
+            exit 1
+          fi
