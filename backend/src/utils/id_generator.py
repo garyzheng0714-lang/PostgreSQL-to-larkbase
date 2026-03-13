@@ -9,23 +9,17 @@ _UNSAFE_CHARS = re.compile(r"[^a-zA-Z0-9_]")
 def make_field_id(column_name: str) -> str:
     """Generate a valid Bitable fieldID from a PostgreSQL column name.
 
-    Rules: max 50 chars, only English letters, numbers, underscore.
+    Uses MD5 hash with 'fld_' prefix to guarantee uniqueness and avoid
+    any Bitable reserved words. Max 20 chars, always safe.
 
     Args:
         column_name: Original PostgreSQL column name.
 
     Returns:
-        Safe fieldID string.
+        Safe fieldID string (e.g. 'fld_a1b2c3d4e5f6').
     """
-    sanitized = _UNSAFE_CHARS.sub("_", column_name)
-    stripped = sanitized.strip("_")
-    if not stripped or not stripped[0].isalpha():
-        stripped = f"f_{hashlib.md5(column_name.encode()).hexdigest()[:12]}"
-    if len(stripped) > 50:
-        prefix = stripped[:42]
-        suffix = hashlib.md5(column_name.encode()).hexdigest()[:7]
-        stripped = f"{prefix}_{suffix}"
-    return stripped
+    digest = hashlib.md5(column_name.encode()).hexdigest()[:16]
+    return f"fld_{digest}"
 
 
 def make_primary_id(row_pk: object) -> str:
