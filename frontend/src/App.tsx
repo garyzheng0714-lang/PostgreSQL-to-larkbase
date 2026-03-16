@@ -42,8 +42,13 @@ export default function App() {
     try {
       setSyncError(null);
       const configs = config.buildConfigs();
-      for (const cfg of configs) {
-        await bitable.saveConfig(cfg);
+      if (configs.length === 0) return;
+      await bitable.saveConfig(configs[0]);
+      if (configs.length > 1) {
+        setSyncError(
+          `已开始同步「${configs[0].table_name}」。` +
+          `飞书连接器每次只能同步 1 张表，其余 ${configs.length - 1} 张表请重新添加连接器。`
+        );
       }
     } catch {
       setSyncError("同步配置保存失败，请重试");
