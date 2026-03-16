@@ -80,12 +80,18 @@ async def validate_request_signature(request: Request) -> bytes:
         "Incoming %s %s (body=%d bytes)",
         request.method, request.url.path, len(body),
     )
+    sig_headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower().startswith("x-base")
+    }
+    logger.info("Signature headers received: %s", sig_headers)
+
     timestamp = request.headers.get("X-Base-Request-Timestamp", "")
     nonce = request.headers.get("X-Base-Request-Nonce", "")
     signature = request.headers.get("X-Base-Signature", "")
 
     if not all([timestamp, nonce, signature]):
-        if settings.secret_key == "testBase":
+        if settings.is_dev_mode:
             return body
         logger.warning(
             "Missing signature headers: ts=%r nonce=%r sig=%r",
