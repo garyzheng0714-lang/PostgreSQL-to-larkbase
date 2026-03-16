@@ -46,8 +46,12 @@ export function useBitable() {
       return null;
     }, []);
 
+  const savedRef = useRef(false);
+
   const saveConfig = useCallback(
     async (config: DatasourceConfig): Promise<void> => {
+      if (savedRef.current) return;
+      savedRef.current = true;
       if (!sdkRef.current) {
         return;
       }
