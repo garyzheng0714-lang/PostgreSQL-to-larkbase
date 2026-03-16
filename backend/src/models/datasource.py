@@ -4,7 +4,7 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
-_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_ ]*$")
+_IDENTIFIER_RE = re.compile(r"^[\w][\w ]*$", re.UNICODE)
 _DANGEROUS_SQL_RE = re.compile(
     r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|EXEC)\b",
     re.IGNORECASE,

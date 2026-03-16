@@ -6,9 +6,9 @@ import type {
   StepKey,
 } from "../types";
 
-const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST ?? "192.168.80.1";
-const DEFAULT_PORT = Number(import.meta.env.VITE_DEFAULT_PORT ?? 5433);
-const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME ?? "postgres";
+const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST ?? "shared-postgres";
+const DEFAULT_PORT = Number(import.meta.env.VITE_DEFAULT_PORT ?? 5432);
+const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME ?? "admin";
 const DEFAULT_SCHEMA = import.meta.env.VITE_DEFAULT_SCHEMA ?? "public";
 
 const STEPS: StepKey[] = ["connection", "tables"];
