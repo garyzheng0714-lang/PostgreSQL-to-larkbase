@@ -1,6 +1,6 @@
 import { Button, Collapsible, Input, InputNumber, Select, Spin, Typography } from "@douyinfe/semi-ui";
 import { IconLink, IconSetting, IconTick } from "@douyinfe/semi-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { listDatabases, testConnection } from "../api/helper";
 import { ErrorBanner } from "./ErrorBanner";
 import type { ConnectionInfo } from "../types";
@@ -71,12 +71,6 @@ export function ConnectionForm({
       setLoadingDbs(false);
     }
   };
-
-  useEffect(() => {
-    if (connection.password && !connected && databases.length === 0) {
-      // Don't auto-connect, wait for user action
-    }
-  }, [connection.password, connected, databases.length]);
 
   const canProceed = connected && selectedDatabases.length > 0;
 
@@ -160,7 +154,7 @@ export function ConnectionForm({
               <label className="form-label">{"端口"}</label>
               <InputNumber
                 value={connection.port}
-                onChange={(v) => updateField("port", v as number)}
+                onChange={(v) => updateField("port", typeof v === "number" ? v : 5432)}
                 min={1}
                 max={65535}
                 style={{ width: "100%" }}

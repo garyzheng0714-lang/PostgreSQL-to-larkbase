@@ -6,11 +6,15 @@ SHA1(timestamp + nonce + secretKey + body).hex() for request signing.
 """
 
 import hashlib
+import hmac
 import logging
+import time
 
 from fastapi import Request
 
 from src.config import settings
+
+SIGNATURE_MAX_AGE_SECONDS = 300
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +54,7 @@ def verify_signature(
     """
     raw = f"{timestamp}{nonce}{secret_key}".encode() + body
     computed = hashlib.sha1(raw).hexdigest()
-    return computed == signature
+    return hmac.compare_digest(computed, signature)
 
 
 async def validate_request_signature(request: Request) -> bytes:
@@ -87,6 +91,15 @@ async def validate_request_signature(request: Request) -> bytes:
             "Missing signature headers: ts=%r nonce=%r sig=%r",
             bool(timestamp), bool(nonce), bool(signature),
         )
+        raise ConnectorAuthError("SIGNATURE_INVALID")
+
+    try:
+        request_time = int(timestamp)
+        if abs(time.time() - request_time) > SIGNATURE_MAX_AGE_SECONDS:
+            logger.warning("Request timestamp expired: %s", timestamp)
+            raise ConnectorAuthError("SIGNATURE_INVALID")
+    except ValueError:
+        logger.warning("Invalid timestamp format: %s", timestamp)
         raise ConnectorAuthError("SIGNATURE_INVALID")
 
     is_valid = verify_signature(

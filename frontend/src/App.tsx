@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BatchTableSelector } from "./components/BatchTableSelector";
 import { ConnectionForm } from "./components/ConnectionForm";
+import { ErrorBanner } from "./components/ErrorBanner";
 import { StepIndicator } from "./components/StepIndicator";
 import { useBitable } from "./hooks/useBitable";
 import { useConfig } from "./hooks/useConfig";
@@ -9,6 +10,7 @@ export default function App() {
   const bitable = useBitable();
   const config = useConfig();
   const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const syncingRef = useRef(false);
 
   useEffect(() => {
@@ -38,10 +40,13 @@ export default function App() {
     setSyncing(true);
 
     try {
+      setSyncError(null);
       const configs = config.buildConfigs();
       for (const cfg of configs) {
         await bitable.saveConfig(cfg);
       }
+    } catch {
+      setSyncError("同步配置保存失败，请重试");
     } finally {
       setSyncing(false);
       syncingRef.current = false;
@@ -50,6 +55,7 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 620, margin: "0 auto", padding: "12px 20px" }}>
+      <ErrorBanner message={syncError} onClose={() => setSyncError(null)} />
       <StepIndicator current={config.currentStep} />
 
       {config.stepKey === "connection" && (

@@ -4,9 +4,10 @@ import logging
 from typing import Any
 
 import asyncpg
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import ORJSONResponse
 
+from src.config import settings
 from src.models.datasource import DatasourceConfig
 from src.models.request import (
     HelperColumnsRequest,
@@ -18,7 +19,25 @@ from src.services import pg_service
 from src.services.type_mapper import map_pg_type
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/helper", tags=["helper"])
+
+
+async def verify_helper_api_key(
+    x_helper_api_key: str = Header(default=""),
+) -> None:
+    """Verify API key for helper endpoints (skipped in dev mode)."""
+    if settings.is_dev_mode:
+        return
+    if not settings.helper_api_key:
+        return
+    if x_helper_api_key != settings.helper_api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+router = APIRouter(
+    prefix="/api/helper",
+    tags=["helper"],
+    dependencies=[Depends(verify_helper_api_key)],
+)
 
 
 def _make_ds_config(req: HelperConnectionRequest) -> DatasourceConfig:
@@ -67,9 +86,9 @@ async def test_connection(req: HelperConnectionRequest) -> dict[str, Any]:
                 "Cannot connect, check host and port"
             ),
         }
-    except Exception as e:
+    except Exception:
         logger.exception("Connection test failed")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "连接失败 / Connection failed"}
 
 
 @router.post("/databases", response_class=ORJSONResponse)
@@ -86,9 +105,9 @@ async def list_databases(req: HelperConnectionRequest) -> dict[str, Any]:
     try:
         databases = await pg_service.list_databases(config)
         return {"success": True, "data": databases}
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to list databases")
-        return {"success": False, "message": str(e), "data": []}
+        return {"success": False, "message": "获取数据库列表失败", "data": []}
 
 
 @router.post("/schemas", response_class=ORJSONResponse)
@@ -105,9 +124,9 @@ async def list_schemas(req: HelperConnectionRequest) -> dict[str, Any]:
     try:
         schemas = await pg_service.list_schemas(config)
         return {"success": True, "data": schemas}
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to list schemas")
-        return {"success": False, "message": str(e), "data": []}
+        return {"success": False, "message": "获取 Schema 列表失败", "data": []}
 
 
 @router.post("/tables", response_class=ORJSONResponse)
@@ -124,9 +143,9 @@ async def list_tables(req: HelperTablesRequest) -> dict[str, Any]:
     try:
         tables = await pg_service.list_tables(config, req.schema_name)
         return {"success": True, "data": tables}
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to list tables")
-        return {"success": False, "message": str(e), "data": []}
+        return {"success": False, "message": "获取表列表失败", "data": []}
 
 
 @router.post("/columns", response_class=ORJSONResponse)
@@ -149,9 +168,9 @@ async def list_columns(req: HelperColumnsRequest) -> dict[str, Any]:
             bitable_type = map_pg_type(col["data_type"])
             enriched.append({**col, "bitable_type": bitable_type})
         return {"success": True, "data": enriched}
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to list columns")
-        return {"success": False, "message": str(e), "data": []}
+        return {"success": False, "message": "获取列信息失败", "data": []}
 
 
 @router.post("/preview_sql", response_class=ORJSONResponse)
@@ -185,6 +204,6 @@ async def preview_sql(req: HelperSQLPreviewRequest) -> dict[str, Any]:
         }
     except asyncpg.PostgresSyntaxError as e:
         return {"success": False, "message": f"SQL 语法错误: {e}"}
-    except Exception as e:
+    except Exception:
         logger.exception("SQL preview failed")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "SQL 预览失败"}

@@ -49,7 +49,6 @@ export function useBitable() {
   const saveConfig = useCallback(
     async (config: DatasourceConfig): Promise<void> => {
       if (!sdkRef.current) {
-        console.log("[dev] config saved:", config);
         return;
       }
       await sdkRef.current.saveConfigAndGoNext({

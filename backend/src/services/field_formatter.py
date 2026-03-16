@@ -55,9 +55,11 @@ def _format_text(value: Any) -> str:
     return str(value)
 
 
-def _format_number(value: Any) -> float | int:
+def _format_number(value: Any) -> float | int | None:
     """Convert numeric value, handling Decimal properly."""
     if isinstance(value, Decimal):
+        if value.is_nan() or value.is_infinite():
+            return None
         if value == value.to_integral_value():
             return int(value)
         return float(value)
@@ -80,11 +82,16 @@ def _format_date(value: Any) -> int | None:
     return None
 
 
-def _format_currency(value: Any) -> float:
+def _format_currency(value: Any) -> float | None:
     """Convert currency value, stripping symbols from PG money type."""
-    if isinstance(value, str):
-        cleaned = value.replace("$", "").replace(",", "").strip()
-        return float(cleaned)
-    if isinstance(value, Decimal):
+    try:
+        if isinstance(value, str):
+            cleaned = value.replace("$", "").replace(",", "").strip()
+            return float(cleaned)
+        if isinstance(value, Decimal):
+            if value.is_nan() or value.is_infinite():
+                return None
+            return float(value)
         return float(value)
-    return float(value)
+    except (ValueError, TypeError):
+        return None

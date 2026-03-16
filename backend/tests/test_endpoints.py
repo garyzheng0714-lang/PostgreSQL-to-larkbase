@@ -17,7 +17,7 @@ class TestMetaEndpoint:
         data = resp.json()
 
         assert data["schemaVersion"] == 1
-        assert data["version"] == "1.0.0"
+        assert data["version"] == "1.2.0"
         assert data["type"] == "data_connector"
         assert "extraData" in data
         assert "dataSourceConfigUiUri" in data["extraData"]

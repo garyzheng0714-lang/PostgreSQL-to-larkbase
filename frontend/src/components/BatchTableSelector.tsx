@@ -36,6 +36,8 @@ export function BatchTableSelector({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const initial: DatabaseTables[] = selectedDatabases.map((db) => ({
       database: db,
       tables: [],
@@ -48,6 +50,7 @@ export function BatchTableSelector({
       const conn: ConnectionInfo = { ...connection, database: db };
       listTables({ ...conn, schema_name: "public" })
         .then((tables) => {
+          if (cancelled) return;
           setDbTables((prev) =>
             prev.map((item) =>
               item.database === db
@@ -57,6 +60,7 @@ export function BatchTableSelector({
           );
         })
         .catch(() => {
+          if (cancelled) return;
           setDbTables((prev) =>
             prev.map((item) =>
               item.database === db
@@ -66,6 +70,8 @@ export function BatchTableSelector({
           );
         });
     });
+
+    return () => { cancelled = true; };
   }, [connection, selectedDatabases]);
 
   const isSelected = (db: string, tableName: string) =>

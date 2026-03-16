@@ -36,24 +36,31 @@ export function TableSelector({
 }: TableSelectorProps) {
   const [schemas, setSchemas] = useState<string[]>([]);
   const [tables, setTables] = useState<TableInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingSchemas, setLoadingSchemas] = useState(false);
+  const [loadingTables, setLoadingTables] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loading = loadingSchemas || loadingTables;
+
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
+    setLoadingSchemas(true);
     listSchemas(connection)
-      .then(setSchemas)
-      .catch(() => setError("加载 Schema 失败"))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setSchemas(data); })
+      .catch(() => { if (!cancelled) setError("加载 Schema 失败"); })
+      .finally(() => { if (!cancelled) setLoadingSchemas(false); });
+    return () => { cancelled = true; };
   }, [connection]);
 
   useEffect(() => {
     if (!schemaName) return;
-    setLoading(true);
+    let cancelled = false;
+    setLoadingTables(true);
     listTables({ ...connection, schema_name: schemaName })
-      .then(setTables)
-      .catch(() => setError("加载表列表失败"))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setTables(data); })
+      .catch(() => { if (!cancelled) setError("加载表列表失败"); })
+      .finally(() => { if (!cancelled) setLoadingTables(false); });
+    return () => { cancelled = true; };
   }, [connection, schemaName]);
 
   const handleNext = useCallback(async () => {
@@ -63,7 +70,7 @@ export function TableSelector({
         setError("请选择一个表");
         return;
       }
-      setLoading(true);
+      setLoadingTables(true);
       try {
         const cols = await listColumns({
           ...connection,
@@ -75,7 +82,7 @@ export function TableSelector({
       } catch {
         setError("加载列信息失败");
       } finally {
-        setLoading(false);
+        setLoadingTables(false);
       }
     } else {
       if (!customSQL.trim()) {

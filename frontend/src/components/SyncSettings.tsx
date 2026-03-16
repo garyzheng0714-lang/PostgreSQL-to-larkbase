@@ -33,9 +33,9 @@ export function SyncSettings({
       await onSave({ ...config, auto_sync: autoSync });
     } catch {
       setError("保存配置失败");
-      savingRef.current = false;
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 

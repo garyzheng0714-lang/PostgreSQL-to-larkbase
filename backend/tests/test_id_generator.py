@@ -6,38 +6,34 @@ from src.utils.id_generator import make_field_id, make_primary_id
 class TestMakeFieldId:
     """Test suite for make_field_id function."""
 
-    def test_simple_ascii_name(self) -> None:
-        """Verify simple ASCII column names pass through."""
-        assert make_field_id("user_name") == "user_name"
+    def test_returns_fld_prefix(self) -> None:
+        """Verify output always starts with fld_ prefix."""
+        assert make_field_id("user_name").startswith("fld_")
 
-    def test_chinese_characters_replaced(self) -> None:
-        """Verify non-ASCII characters are replaced with underscores."""
-        result = make_field_id("用户名")
-        assert all(c.isalnum() or c == "_" for c in result)
+    def test_consistent_output(self) -> None:
+        """Verify same input produces same output."""
+        assert make_field_id("user_name") == make_field_id("user_name")
 
-    def test_starts_with_number_gets_prefix(self) -> None:
-        """Verify names starting with numbers get 'f_' prefix."""
-        result = make_field_id("123abc")
-        assert result.startswith("f_")
+    def test_different_names_produce_different_ids(self) -> None:
+        """Verify different column names produce different IDs."""
+        assert make_field_id("id") != make_field_id("name")
 
-    def test_max_length_50(self) -> None:
-        """Verify output is truncated to 50 characters."""
+    def test_max_length_20(self) -> None:
+        """Verify output is at most 20 characters (fld_ + 16 hex)."""
         long_name = "a" * 100
         result = make_field_id(long_name)
-        assert len(result) <= 50
+        assert len(result) <= 20
 
-    def test_special_chars_stripped(self) -> None:
-        """Verify special characters are replaced."""
-        result = make_field_id("col-name.with@special")
-        assert "-" not in result
-        assert "." not in result
-        assert "@" not in result
+    def test_safe_characters_only(self) -> None:
+        """Verify output contains only safe characters."""
+        result = make_field_id("用户名@special.chars")
+        assert all(c.isalnum() or c == "_" for c in result)
 
     def test_empty_name(self) -> None:
         """Verify empty names produce valid output."""
         result = make_field_id("")
         assert len(result) > 0
-        assert result[0].isalpha()
+        assert result.startswith("fld_")
 
 
 class TestMakePrimaryId:

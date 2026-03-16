@@ -1,6 +1,14 @@
 """DatasourceConfig model for user-saved sync configuration."""
 
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator
+
+_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_ ]*$")
+_DANGEROUS_SQL_RE = re.compile(
+    r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|EXEC)\b",
+    re.IGNORECASE,
+)
 
 
 class FieldRename(BaseModel):
@@ -57,3 +65,33 @@ class DatasourceConfig(BaseModel):
     field_renames: dict[str, str] | None = None
     number_formats: dict[str, NumberFormat] | None = None
     auto_sync: bool = True
+
+    @field_validator("schema_name")
+    @classmethod
+    def validate_schema_name(cls, v: str) -> str:
+        if not _IDENTIFIER_RE.match(v):
+            raise ValueError(f"Invalid schema name: {v}")
+        return v
+
+    @field_validator("table_name")
+    @classmethod
+    def validate_table_name(cls, v: str | None) -> str | None:
+        if v is not None and not _IDENTIFIER_RE.match(v):
+            raise ValueError(f"Invalid table name: {v}")
+        return v
+
+    @field_validator("selected_fields")
+    @classmethod
+    def validate_selected_fields(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None:
+            for f in v:
+                if not _IDENTIFIER_RE.match(f):
+                    raise ValueError(f"Invalid field name: {f}")
+        return v
+
+    @field_validator("custom_sql")
+    @classmethod
+    def validate_custom_sql(cls, v: str | None) -> str | None:
+        if v is not None and _DANGEROUS_SQL_RE.search(v):
+            raise ValueError("SQL contains disallowed keywords (write operations)")
+        return v
