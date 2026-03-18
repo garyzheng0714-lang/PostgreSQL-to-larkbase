@@ -6,6 +6,11 @@
 ## Architecture
 - **Frontend**: React + Vite + Semi UI (`frontend/`)，作为飞书 iframe 内的配置页面
 - **Backend**: Python FastAPI + asyncpg (`backend/`)，Docker 部署
+- **Adapter Layer**: `backend/src/adapters/` — 数据源适配器抽象层，支持多数据源扩展
+  - `base.py` — DataSourceAdapter Protocol + 共享数据类型
+  - `registry.py` — 全局适配器注册表
+  - `postgres/` — PostgreSQL 适配器实现（含连接池、类型映射、值格式化）
+- **Error Handling**: `backend/src/middleware/error_handler.py` — 统一 ConnectorError + 全局异常处理
 - **Reverse Proxy**: Caddy，域名 `pg2bitable.garyzheng.com`
 - **Server**: 阿里云 ECS `112.124.103.65`（SSH alias: `aliyun-prod`）
 
@@ -57,6 +62,11 @@ Headers: `X-Base-Request-Timestamp`, `X-Base-Request-Nonce`, `X-Base-Signature`
 - Docker PostgreSQL（shared-postgres）端口 `5432`，用户 `admin`
 
 ## Key Files
+- `backend/src/adapters/base.py` — DataSourceAdapter Protocol 定义
+- `backend/src/adapters/registry.py` — 适配器注册表（注册/查找/关闭）
+- `backend/src/adapters/postgres/service.py` — PostgreSQL 适配器实现
+- `backend/src/adapters/postgres/pool.py` — 连接池管理器（多配置缓存 + TTL 清理）
+- `backend/src/middleware/error_handler.py` — ConnectorError + 全局异常处理器
 - `backend/src/routers/meta.py` — meta.json 端点（含缓存破坏逻辑）
 - `backend/src/middleware/signature.py` — 飞书签名验证
 - `frontend/src/hooks/useBitable.ts` — 飞书 Connector SDK 集成

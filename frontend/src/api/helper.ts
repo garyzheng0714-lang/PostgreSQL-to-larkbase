@@ -12,10 +12,18 @@ interface ApiResponse<T> {
   data?: T;
 }
 
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
+  server_version: string;
+  database_size: string;
+  table_count: number;
+}
+
 export async function testConnection(
   conn: ConnectionInfo
-): Promise<ApiResponse<null>> {
-  const { data } = await apiClient.post<ApiResponse<null>>(
+): Promise<ConnectionTestResult> {
+  const { data } = await apiClient.post<ConnectionTestResult>(
     "/api/helper/test_connection",
     conn
   );

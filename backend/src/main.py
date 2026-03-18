@@ -1,12 +1,18 @@
-"""FastAPI application entry point for PostgreSQL-to-Larkbase connector."""
+"""FastAPI application entry point for the data connector platform."""
 
 import logging
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
+from src.adapters import registry
+from src.adapters.postgres.pool import get_pool_manager
+from src.adapters.postgres.service import PostgresAdapter
 from src.config import settings
+from src.middleware.error_handler import register_error_handlers
 from src.middleware.signature import ConnectorAuthError
 from src.models.error import ERRORS
 from src.routers import helper, meta, records, table_meta
@@ -16,10 +22,21 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    registry.register(PostgresAdapter())
+    pm = get_pool_manager()
+    await pm.start_cleanup_loop()
+    yield
+    await registry.close_all()
+
+
 app = FastAPI(
-    title="PostgreSQL to Larkbase Connector",
-    version="0.1.0",
+    title="Data Connector Platform",
+    version="1.3.0",
     default_response_class=ORJSONResponse,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -36,6 +53,8 @@ app.add_middleware(
     ],
 )
 
+register_error_handlers(app)
+
 app.include_router(meta.router)
 app.include_router(table_meta.router)
 app.include_router(records.router)
@@ -47,11 +66,6 @@ async def connector_auth_error_handler(
     _request: Request,
     exc: ConnectorAuthError,
 ) -> ORJSONResponse:
-    """Return HTTP 200 with connector error code for auth failures.
-
-    Feishu Base server expects all responses as HTTP 200 with error
-    information in the response body, not as HTTP 4xx status codes.
-    """
     code, msg = ERRORS.get(exc.error_key, ERRORS["SIGNATURE_INVALID"])
     return ORJSONResponse(
         status_code=200,
@@ -61,9 +75,4 @@ async def connector_auth_error_handler(
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    """Health check endpoint.
-
-    Returns:
-        Status indicator.
-    """
     return {"status": "ok"}

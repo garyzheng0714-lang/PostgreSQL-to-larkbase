@@ -233,6 +233,11 @@ export function BatchTableSelector({
                   onChange={() => toggleTable(db.database, table)}
                 />
                 <Text style={{ fontSize: 13, flex: 1 }}>{table.name}</Text>
+                {table.estimated_rows != null && table.estimated_rows > 0 && (
+                  <Text type="tertiary" style={{ fontSize: 11 }}>
+                    {"~"}{table.estimated_rows.toLocaleString()}{" 行"}
+                  </Text>
+                )}
                 {table.type === "view" && (
                   <Tag size="small" color="blue" style={{ fontSize: 11 }}>
                     {"视图"}

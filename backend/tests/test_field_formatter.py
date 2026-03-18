@@ -3,7 +3,7 @@
 import datetime
 from decimal import Decimal
 
-from src.services.field_formatter import format_value
+from src.adapters.postgres.formatter import format_value
 
 
 class TestFormatValue:
