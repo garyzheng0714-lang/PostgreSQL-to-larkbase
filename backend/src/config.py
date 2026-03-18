@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     max_row_limit: int = 50000
     log_level: str = "INFO"
     helper_api_key: str = ""
+    pool_max_size: int = 5
+    pool_idle_timeout: int = 300
+    pool_max_pools: int = 20
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
