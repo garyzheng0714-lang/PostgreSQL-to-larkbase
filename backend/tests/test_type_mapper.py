@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.services.type_mapper import (
+from src.adapters.postgres.type_mapper import (
     FIELD_CHECKBOX,
     FIELD_CURRENCY,
     FIELD_DATE,
