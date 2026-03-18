@@ -9,6 +9,7 @@ export interface ConnectionInfo {
 export interface TableInfo {
   name: string;
   type: "table" | "view";
+  estimated_rows?: number;
 }
 
 export interface ColumnInfo {

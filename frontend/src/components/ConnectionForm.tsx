@@ -31,6 +31,11 @@ export function ConnectionForm({
   const [databases, setDatabases] = useState<string[]>([]);
   const [loadingDbs, setLoadingDbs] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverInfo, setServerInfo] = useState<{
+    version: string;
+    size: string;
+    tableCount: number;
+  } | null>(null);
 
   const updateField = (field: keyof ConnectionInfo, value: string | number) => {
     onChange({ ...connection, [field]: value });
@@ -57,6 +62,13 @@ export function ConnectionForm({
         return;
       }
       setConnected(true);
+      if (result.server_version || result.database_size) {
+        setServerInfo({
+          version: result.server_version ?? "",
+          size: result.database_size ?? "",
+          tableCount: result.table_count ?? 0,
+        });
+      }
 
       setLoadingDbs(true);
       const dbs = await listDatabases(tempConn);
@@ -102,6 +114,25 @@ export function ConnectionForm({
           </Button>
         </div>
       </div>
+
+      {connected && serverInfo && (
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            padding: "8px 12px",
+            background: "var(--semi-color-fill-0)",
+            borderRadius: 6,
+            marginTop: 8,
+            fontSize: 12,
+            color: "var(--semi-color-text-2)",
+          }}
+        >
+          {serverInfo.version && <span>{serverInfo.version}</span>}
+          {serverInfo.size && <span>{"📦 "}{serverInfo.size}</span>}
+          {serverInfo.tableCount > 0 && <span>{serverInfo.tableCount}{" 张表"}</span>}
+        </div>
+      )}
 
       {connected && (
         <div className="form-row">
