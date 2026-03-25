@@ -122,7 +122,7 @@ cd /path/to/PostgreSQL-to-larkbase
 docker compose up -d --build
 ```
 
-注意：当前仓库里的 [docker-compose.yml](/Users/simba/local_vibecoding/PostgreSQL-to-larkbase/docker-compose.yml) 使用了外部网络 `postgres_default`。如果你的服务器上没有这个网络，需要二选一：
+注意：当前仓库里的 [docker-compose.yml](docker-compose.yml) 使用了外部网络 `postgres_default`。如果你的服务器上没有这个网络，需要二选一：
 
 - 删除 `services.backend.networks` 和底部 `networks` 配置，使用默认 bridge 网络
 - 或手动创建同名外部网络
@@ -311,7 +311,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO bitable_sync
 
 ### `docker compose up` 报网络不存在
 
-这是因为仓库示例的 [docker-compose.yml](/Users/simba/local_vibecoding/PostgreSQL-to-larkbase/docker-compose.yml) 依赖外部网络 `postgres_default`。大多数自部署场景可以直接删掉这段网络配置。
+这是因为仓库示例的 [docker-compose.yml](docker-compose.yml) 依赖外部网络 `postgres_default`。大多数自部署场景可以直接删掉这段网络配置。
 
 ### 自定义 SQL 预览失败
 
@@ -342,7 +342,7 @@ uv sync --dev
 uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-本地开发时可以参考 [backend/.env.example](/Users/simba/local_vibecoding/PostgreSQL-to-larkbase/backend/.env.example)。
+本地开发时可以参考 [backend/.env.example](backend/.env.example)。
 
 ## 生产建议
 
@@ -355,9 +355,9 @@ uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 当前仓库里几个需要注意的文件
 
-- [deploy.sh](/Users/simba/local_vibecoding/PostgreSQL-to-larkbase/deploy.sh)：这是当前作者机器上的部署脚本示例，不是通用的一键安装脚本
-- [docker-compose.yml](/Users/simba/local_vibecoding/PostgreSQL-to-larkbase/docker-compose.yml)：能直接起后端，但网络配置默认偏作者环境
-- [backend/.env.example](/Users/simba/local_vibecoding/PostgreSQL-to-larkbase/backend/.env.example)：开发环境变量示例
+- [deploy.sh](deploy.sh)：这是当前作者机器上的部署脚本示例，不是通用的一键安装脚本
+- [docker-compose.yml](docker-compose.yml)：能直接起后端，但网络配置默认偏作者环境
+- [backend/.env.example](backend/.env.example)：开发环境变量示例
 
 ## 下一步可做的增强
 
