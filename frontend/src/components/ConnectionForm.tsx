@@ -46,10 +46,6 @@ export function ConnectionForm({
   };
 
   const handleConnect = async () => {
-    if (!connection.password) {
-      setError("请输入密码");
-      return;
-    }
     setTesting(true);
     setError(null);
     setConnected(false);
@@ -93,12 +89,11 @@ export function ConnectionForm({
 
       <div className="form-row">
         <label className="form-label">
-          <span className="required">*</span>
           {"密码"}
         </label>
         <div style={{ display: "flex", gap: 8 }}>
           <Input
-            placeholder="输入数据库密码"
+            placeholder="输入密码（trust 认证可留空）"
             mode="password"
             value={connection.password}
             onChange={(v) => updateField("password", v)}
@@ -109,7 +104,7 @@ export function ConnectionForm({
           <Button
             icon={testing ? <Spin size="small" /> : connected ? <IconTick style={{ color: "var(--semi-color-success)" }} /> : <IconLink />}
             onClick={handleConnect}
-            disabled={!connection.password || testing}
+            disabled={testing}
           >
             {connected ? "已连接" : "连接"}
           </Button>
