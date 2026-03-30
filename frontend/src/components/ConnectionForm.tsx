@@ -1,5 +1,5 @@
 import { Button, Collapsible, Input, InputNumber, RadioGroup, Radio, Select, Spin, TextArea, Typography } from "@douyinfe/semi-ui";
-import { IconLink, IconLock, IconSetting, IconTick } from "@douyinfe/semi-icons";
+import { IconLink, IconSetting, IconTick } from "@douyinfe/semi-icons";
 import { useState } from "react";
 import { listDatabases, testConnection } from "../api/helper";
 import { ErrorBanner } from "./ErrorBanner";
@@ -36,7 +36,6 @@ export function ConnectionForm({
     size: string;
     tableCount: number;
   } | null>(null);
-  const [showSsl, setShowSsl] = useState(false);
 
   const updateField = (field: keyof ConnectionInfo, value: string | number | null) => {
     onChange({ ...connection, [field]: value });
@@ -87,13 +86,11 @@ export function ConnectionForm({
     <div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
 
+      {/* 核心：密码 + 连接按钮 */}
       <div className="form-row">
-        <label className="form-label">
-          {"密码"}
-        </label>
         <div style={{ display: "flex", gap: 8 }}>
           <Input
-            placeholder="输入密码（trust 认证可留空）"
+            placeholder="输入密码（可留空）"
             mode="password"
             value={connection.password}
             onChange={(v) => updateField("password", v)}
@@ -111,6 +108,7 @@ export function ConnectionForm({
         </div>
       </div>
 
+      {/* 连接成功后的服务器信息 */}
       {connected && serverInfo && (
         <div
           style={{
@@ -119,9 +117,9 @@ export function ConnectionForm({
             padding: "8px 12px",
             background: "var(--semi-color-fill-0)",
             borderRadius: 6,
-            marginTop: 8,
             fontSize: 12,
             color: "var(--semi-color-text-2)",
+            marginBottom: 8,
           }}
         >
           {serverInfo.version && <span>{serverInfo.version}</span>}
@@ -130,6 +128,7 @@ export function ConnectionForm({
         </div>
       )}
 
+      {/* 选择数据库 */}
       {connected && (
         <div className="form-row">
           <label className="form-label">
@@ -156,86 +155,14 @@ export function ConnectionForm({
         </div>
       )}
 
-      <div
-        style={{ marginTop: 8, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
-        onClick={() => setShowSsl(!showSsl)}
-      >
-        <IconLock size="small" style={{ color: "var(--semi-color-text-2)" }} />
-        <Text type="tertiary" style={{ fontSize: 12 }}>
-          {showSsl ? "收起 SSL 设置" : "SSL 设置"}
-        </Text>
-      </div>
-
-      <Collapsible isOpen={showSsl}>
-        <div style={{ padding: "12px 0 0" }}>
-          <div className="form-row">
-            <label className="form-label">SSL 模式</label>
-            <RadioGroup
-              value={connection.ssl_mode ?? "disable"}
-              onChange={(e) => {
-                onChange({ ...connection, ssl_mode: e.target.value as SslMode });
-                setConnected(false);
-              }}
-              direction="vertical"
-            >
-              <Radio value="disable">
-                <span>关闭 SSL</span>
-                <Text type="tertiary" style={{ fontSize: 11, marginLeft: 8 }}>内网数据库使用</Text>
-              </Radio>
-              <Radio value="require">
-                <span>SSL 加密</span>
-                <Text type="tertiary" style={{ fontSize: 11, marginLeft: 8 }}>推荐，适用于大多数云数据库</Text>
-              </Radio>
-              <Radio value="verify-full">
-                <span>SSL + 证书验证</span>
-                <Text type="tertiary" style={{ fontSize: 11, marginLeft: 8 }}>需要 CA 证书，最安全</Text>
-              </Radio>
-            </RadioGroup>
-          </div>
-          {connection.ssl_mode === "verify-full" && (
-            <>
-              <div className="form-row">
-                <label className="form-label">CA 证书</label>
-                <TextArea
-                  placeholder="-----BEGIN CERTIFICATE-----"
-                  value={connection.ssl_root_cert ?? ""}
-                  onChange={(v) => onChange({ ...connection, ssl_root_cert: v || null })}
-                  rows={3}
-                  style={{ fontFamily: "monospace", fontSize: 12 }}
-                />
-              </div>
-              <div className="form-row">
-                <label className="form-label">客户端证书（可选）</label>
-                <TextArea
-                  placeholder="-----BEGIN CERTIFICATE-----"
-                  value={connection.ssl_cert ?? ""}
-                  onChange={(v) => onChange({ ...connection, ssl_cert: v || null })}
-                  rows={2}
-                  style={{ fontFamily: "monospace", fontSize: 12 }}
-                />
-              </div>
-              <div className="form-row">
-                <label className="form-label">客户端密钥（可选）</label>
-                <TextArea
-                  placeholder="-----BEGIN PRIVATE KEY-----"
-                  value={connection.ssl_key ?? ""}
-                  onChange={(v) => onChange({ ...connection, ssl_key: v || null })}
-                  rows={2}
-                  style={{ fontFamily: "monospace", fontSize: 12 }}
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </Collapsible>
-
+      {/* 更多设置（主机/端口/用户名/SSL/超时 全部收在这里） */}
       <div
         style={{ marginTop: 8, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
         onClick={() => onShowAdvancedChange(!showAdvanced)}
       >
         <IconSetting size="small" style={{ color: "var(--semi-color-text-2)" }} />
         <Text type="tertiary" style={{ fontSize: 12 }}>
-          {showAdvanced ? "收起高级设置" : "高级设置"}
+          {showAdvanced ? "收起更多设置" : "更多设置"}
         </Text>
       </div>
 
@@ -270,7 +197,38 @@ export function ConnectionForm({
               size="default"
             />
           </div>
-          <div className="form-row-inline">
+
+          {/* SSL */}
+          <div className="form-row" style={{ marginTop: 8 }}>
+            <label className="form-label">SSL 模式</label>
+            <RadioGroup
+              value={connection.ssl_mode ?? "disable"}
+              onChange={(e) => {
+                onChange({ ...connection, ssl_mode: e.target.value as SslMode });
+                setConnected(false);
+              }}
+            >
+              <Radio value="disable">关闭</Radio>
+              <Radio value="require">加密</Radio>
+              <Radio value="verify-full">证书验证</Radio>
+            </RadioGroup>
+          </div>
+
+          {connection.ssl_mode === "verify-full" && (
+            <div className="form-row">
+              <label className="form-label">CA 证书</label>
+              <TextArea
+                placeholder="-----BEGIN CERTIFICATE-----"
+                value={connection.ssl_root_cert ?? ""}
+                onChange={(v) => onChange({ ...connection, ssl_root_cert: v || null })}
+                rows={3}
+                style={{ fontFamily: "monospace", fontSize: 12 }}
+              />
+            </div>
+          )}
+
+          {/* 超时 */}
+          <div className="form-row-inline" style={{ marginTop: 4 }}>
             <div className="form-row">
               <label className="form-label">{"连接超时 (秒)"}</label>
               <InputNumber
