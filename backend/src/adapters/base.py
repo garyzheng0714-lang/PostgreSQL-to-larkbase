@@ -32,6 +32,14 @@ class BaseConfig(BaseModel):
     username: str
     password: str
     database: str
+    # SSL
+    ssl_mode: str = "disable"
+    ssl_root_cert: str | None = None
+    ssl_cert: str | None = None
+    ssl_key: str | None = None
+    # Timeouts (None = use server defaults)
+    connect_timeout: int | None = None
+    query_timeout: int | None = None
 
 
 C = TypeVar("C", bound=BaseConfig)

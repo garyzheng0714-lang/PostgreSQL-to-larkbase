@@ -31,6 +31,12 @@ class HelperConnectionRequest(BaseModel):
     username: str
     password: str
     database: str
+    ssl_mode: str = "disable"
+    ssl_root_cert: str | None = None
+    ssl_cert: str | None = None
+    ssl_key: str | None = None
+    connect_timeout: int | None = None
+    query_timeout: int | None = None
 
 
 class HelperTablesRequest(HelperConnectionRequest):

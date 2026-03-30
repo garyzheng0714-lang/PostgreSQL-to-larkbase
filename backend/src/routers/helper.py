@@ -44,6 +44,12 @@ def _make_config(req: HelperConnectionRequest) -> PostgresConfig:
         username=req.username,
         password=req.password,
         database=req.database,
+        ssl_mode=req.ssl_mode,
+        ssl_root_cert=req.ssl_root_cert,
+        ssl_cert=req.ssl_cert,
+        ssl_key=req.ssl_key,
+        connect_timeout=req.connect_timeout,
+        query_timeout=req.query_timeout,
     )
 
 

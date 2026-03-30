@@ -18,6 +18,7 @@ from src.adapters.postgres.formatter import format_value
 from src.adapters.postgres.pool import get_pool_manager
 from src.adapters.postgres.type_mapper import can_be_primary, map_pg_type
 from src.middleware.error_handler import ConnectorError
+from src.services.ssl_context import build_ssl_context
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,21 @@ class PostgresConfig(BaseConfig):
     """PostgreSQL-specific configuration."""
 
     schema_name: str = "public"
+
+
+def _ssl_kwargs(config: BaseConfig) -> dict[str, Any]:
+    """Build SSL and timeout kwargs for pool.acquire()."""
+    return {
+        "ssl": build_ssl_context(
+            ssl_mode=config.ssl_mode,
+            ssl_root_cert=config.ssl_root_cert,
+            ssl_cert=config.ssl_cert,
+            ssl_key=config.ssl_key,
+        ),
+        "ssl_mode": config.ssl_mode,
+        "connect_timeout": float(config.connect_timeout) if config.connect_timeout else None,
+        "command_timeout": float(config.query_timeout) if config.query_timeout else None,
+    }
 
 
 class PostgresAdapter:
@@ -39,6 +55,7 @@ class PostgresAdapter:
             async with pm.acquire(
                 config.host, config.port, config.username,
                 config.password, config.database,
+                **_ssl_kwargs(config),
             ) as conn:
                 version = await conn.fetchval("SELECT version()")
                 size_row = await conn.fetchval(
@@ -88,6 +105,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             rows = await conn.fetch(
                 "SELECT datname FROM pg_database "
@@ -100,6 +118,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             rows = await conn.fetch(
                 "SELECT schema_name FROM information_schema.schemata "
@@ -116,6 +135,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             rows = await conn.fetch(
                 "SELECT t.table_name, t.table_type, "
@@ -145,6 +165,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             rows = await conn.fetch(
                 "SELECT column_name, data_type, udt_name, is_nullable, "
@@ -171,6 +192,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             async with conn.transaction(readonly=True):
                 stmt = await conn.prepare(
@@ -199,6 +221,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             if custom_sql:
                 sql = custom_sql.rstrip(";")
@@ -223,6 +246,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             rows = await conn.fetch(
                 "SELECT a.attname "
@@ -241,6 +265,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             safe_sql = sql.rstrip(";")
             query = f"SELECT * FROM ({safe_sql}) AS _sub LIMIT $1"
@@ -253,6 +278,7 @@ class PostgresAdapter:
         async with pm.acquire(
             config.host, config.port, config.username,
             config.password, config.database,
+            **_ssl_kwargs(config),
         ) as conn:
             try:
                 async with conn.transaction(readonly=True):
