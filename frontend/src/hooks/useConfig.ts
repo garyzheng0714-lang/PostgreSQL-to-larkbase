@@ -21,6 +21,7 @@ export function useConfig() {
     username: DEFAULT_USERNAME,
     password: "",
     database: "",
+    ssl_mode: "disable",
   });
   const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
   const [selectedTables, setSelectedTables] = useState<BatchSyncItem[]>([]);
@@ -51,6 +52,12 @@ export function useConfig() {
       field_renames: null,
       number_formats: null,
       auto_sync: true,
+      ssl_mode: connection.ssl_mode,
+      ssl_root_cert: connection.ssl_root_cert,
+      ssl_cert: connection.ssl_cert,
+      ssl_key: connection.ssl_key,
+      connect_timeout: connection.connect_timeout,
+      query_timeout: connection.query_timeout,
     }));
   }, [connection, selectedTables]);
 
@@ -61,6 +68,12 @@ export function useConfig() {
       username: config.username,
       password: config.password,
       database: config.database,
+      ssl_mode: config.ssl_mode ?? "disable",
+      ssl_root_cert: config.ssl_root_cert,
+      ssl_cert: config.ssl_cert,
+      ssl_key: config.ssl_key,
+      connect_timeout: config.connect_timeout,
+      query_timeout: config.query_timeout,
     });
     if (config.database) {
       setSelectedDatabases([config.database]);

@@ -26,8 +26,9 @@ logger = logging.getLogger(__name__)
 
 def _make_pool_key(
     host: str, port: int, user: str, database: str,
+    ssl_mode: str = "disable",
 ) -> str:
-    return f"{host}:{port}:{user}:{database}"
+    return f"{host}:{port}:{user}:{database}:{ssl_mode}"
 
 
 class _PoolEntry:
@@ -69,8 +70,12 @@ class ConnectionPoolManager:
         user: str,
         password: str,
         database: str,
+        ssl: Any = None,
+        ssl_mode: str = "disable",
+        connect_timeout: float | None = None,
+        command_timeout: float | None = None,
     ) -> asyncpg.Pool:
-        key = _make_pool_key(host, port, user, database)
+        key = _make_pool_key(host, port, user, database, ssl_mode)
 
         async with self._lock:
             entry = self._pools.get(key)
@@ -87,10 +92,11 @@ class ConnectionPoolManager:
                 user=user,
                 password=password,
                 database=database,
+                ssl=ssl,
                 min_size=1,
                 max_size=self._max_pool_size,
-                timeout=self._connect_timeout,
-                command_timeout=self._command_timeout,
+                timeout=connect_timeout or self._connect_timeout,
+                command_timeout=command_timeout or self._command_timeout,
             )
             self._pools[key] = _PoolEntry(pool, key)
             logger.info(
@@ -115,9 +121,15 @@ class ConnectionPoolManager:
         user: str,
         password: str,
         database: str,
+        ssl: Any = None,
+        ssl_mode: str = "disable",
+        connect_timeout: float | None = None,
+        command_timeout: float | None = None,
     ) -> AsyncGenerator[asyncpg.Connection, None]:
         pool = await self._get_or_create_pool(
             host, port, user, password, database,
+            ssl=ssl, ssl_mode=ssl_mode,
+            connect_timeout=connect_timeout, command_timeout=command_timeout,
         )
         async with pool.acquire() as conn:
             yield conn

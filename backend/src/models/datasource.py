@@ -65,6 +65,15 @@ class DatasourceConfig(BaseModel):
     field_renames: dict[str, str] | None = None
     number_formats: dict[str, NumberFormat] | None = None
     auto_sync: bool = True
+    ssl_mode: str = Field(
+        default="disable",
+        pattern="^(disable|allow|prefer|require|verify-ca|verify-full)$",
+    )
+    ssl_root_cert: str | None = None
+    ssl_cert: str | None = None
+    ssl_key: str | None = None
+    connect_timeout: int | None = Field(default=None, ge=1, le=60)
+    query_timeout: int | None = Field(default=None, ge=1, le=300)
 
     @field_validator("schema_name")
     @classmethod
