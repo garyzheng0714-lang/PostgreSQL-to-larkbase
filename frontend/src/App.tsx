@@ -69,8 +69,6 @@ export default function App() {
           onChange={config.setConnection}
           selectedDatabases={config.selectedDatabases}
           onSelectedDatabasesChange={config.setSelectedDatabases}
-          showAdvanced={config.showAdvanced}
-          onShowAdvancedChange={config.setShowAdvanced}
           onNext={config.goNext}
         />
       )}
