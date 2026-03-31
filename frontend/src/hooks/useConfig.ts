@@ -25,8 +25,6 @@ export function useConfig() {
   });
   const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
   const [selectedTables, setSelectedTables] = useState<BatchSyncItem[]>([]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
   const stepKey = STEPS[currentStep];
 
   const goNext = useCallback(() => {
@@ -98,8 +96,6 @@ export function useConfig() {
     setSelectedDatabases,
     selectedTables,
     setSelectedTables,
-    showAdvanced,
-    setShowAdvanced,
     goNext,
     goBack,
     buildConfigs,

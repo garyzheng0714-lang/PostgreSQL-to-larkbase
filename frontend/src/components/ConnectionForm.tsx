@@ -1,4 +1,4 @@
-import { Button, Collapsible, Input, InputNumber, RadioGroup, Radio, Select, Spin, TextArea, Typography } from "@douyinfe/semi-ui";
+import { Button, Input, InputNumber, RadioGroup, Radio, Select, Spin, TextArea, Typography } from "@douyinfe/semi-ui";
 import { useState, useEffect } from "react";
 import { listDatabases, testConnection } from "../api/helper";
 import { ErrorBanner } from "./ErrorBanner";
@@ -22,8 +22,6 @@ interface ConnectionFormProps {
   onChange: (conn: ConnectionInfo) => void;
   selectedDatabases: string[];
   onSelectedDatabasesChange: (dbs: string[]) => void;
-  showAdvanced: boolean;
-  onShowAdvancedChange: (v: boolean) => void;
   onNext: () => void;
 }
 
@@ -62,8 +60,6 @@ export function ConnectionForm({
   onChange,
   selectedDatabases,
   onSelectedDatabasesChange,
-  showAdvanced,
-  onShowAdvancedChange,
   onNext,
 }: ConnectionFormProps) {
   const [testing, setTesting] = useState(false);
@@ -219,103 +215,92 @@ export function ConnectionForm({
         </div>
       )}
 
-      {/* Manual input toggle */}
-      <div
-        style={{ marginTop: 16, cursor: "pointer", display: "inline-block" }}
-        onClick={() => onShowAdvancedChange(!showAdvanced)}
-      >
-        <Text type="tertiary" size="small" style={{ userSelect: "none" }}>
-          {showAdvanced ? "收起 ↑" : "▽ 手动输入"}
-        </Text>
-      </div>
-
-      <Collapsible isOpen={showAdvanced}>
-        <div style={{ paddingTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Host + Port */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 12 }}>
-            <div>
-              <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
-                主机地址
-              </Text>
-              <Input
-                placeholder={DEFAULT_HOST}
-                value={connection.host}
-                onChange={(v) => updateField("host", v)}
-              />
-            </div>
-            <div>
-              <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
-                端口
-              </Text>
-              <InputNumber
-                value={connection.port}
-                onChange={(v) => updateField("port", typeof v === "number" ? v : 5432)}
-                min={1}
-                max={65535}
-                style={{ width: "100%" }}
-              />
-            </div>
-          </div>
-
-          {/* Username + Password */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
-                用户名
-              </Text>
-              <Input
-                placeholder={DEFAULT_USERNAME}
-                value={connection.username}
-                onChange={(v) => updateField("username", v)}
-              />
-            </div>
-            <div>
-              <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
-                密码
-              </Text>
-              <Input
-                mode="password"
-                placeholder="可留空"
-                value={connection.password}
-                onChange={(v) => updateField("password", v)}
-              />
-            </div>
-          </div>
-
-          {/* SSL */}
+      {/* Manual input fields */}
+      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Host + Port */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 12 }}>
           <div>
             <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
-              SSL
+              主机地址
             </Text>
-            <RadioGroup
-              value={connection.ssl_mode ?? "disable"}
-              onChange={(e) => {
-                onChange({ ...connection, ssl_mode: e.target.value as SslMode });
-                resetState();
-              }}
-            >
-              <Radio value="disable">关闭</Radio>
-              <Radio value="require">加密</Radio>
-              <Radio value="verify-full">证书验证</Radio>
-            </RadioGroup>
+            <Input
+              placeholder={DEFAULT_HOST}
+              value={connection.host}
+              onChange={(v) => updateField("host", v)}
+            />
           </div>
-
-          {connection.ssl_mode === "verify-full" && (
-            <div>
-              <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
-                CA 证书
-              </Text>
-              <TextArea
-                placeholder="-----BEGIN CERTIFICATE-----"
-                value={connection.ssl_root_cert ?? ""}
-                onChange={(v) => onChange({ ...connection, ssl_root_cert: v || null })}
-                rows={3}
-                style={{ fontFamily: "var(--semi-font-family-code, monospace)", fontSize: 12 }}
-              />
-            </div>
-          )}
+          <div>
+            <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
+              端口
+            </Text>
+            <InputNumber
+              value={connection.port}
+              onChange={(v) => updateField("port", typeof v === "number" ? v : 5432)}
+              min={1}
+              max={65535}
+              style={{ width: "100%" }}
+            />
+          </div>
         </div>
-      </Collapsible>
+
+        {/* Username + Password */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
+              用户名
+            </Text>
+            <Input
+              placeholder={DEFAULT_USERNAME}
+              value={connection.username}
+              onChange={(v) => updateField("username", v)}
+            />
+          </div>
+          <div>
+            <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
+              密码
+            </Text>
+            <Input
+              mode="password"
+              placeholder="可留空"
+              value={connection.password}
+              onChange={(v) => updateField("password", v)}
+            />
+          </div>
+        </div>
+
+        {/* SSL */}
+        <div>
+          <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
+            SSL
+          </Text>
+          <RadioGroup
+            value={connection.ssl_mode ?? "disable"}
+            onChange={(e) => {
+              onChange({ ...connection, ssl_mode: e.target.value as SslMode });
+              resetState();
+            }}
+          >
+            <Radio value="disable">关闭</Radio>
+            <Radio value="require">加密</Radio>
+            <Radio value="verify-full">证书验证</Radio>
+          </RadioGroup>
+        </div>
+
+        {connection.ssl_mode === "verify-full" && (
+          <div>
+            <Text size="small" type="tertiary" style={{ display: "block", marginBottom: 2 }}>
+              CA 证书
+            </Text>
+            <TextArea
+              placeholder="-----BEGIN CERTIFICATE-----"
+              value={connection.ssl_root_cert ?? ""}
+              onChange={(v) => onChange({ ...connection, ssl_root_cert: v || null })}
+              rows={3}
+              style={{ fontFamily: "var(--semi-font-family-code, monospace)", fontSize: 12 }}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Next button */}
       <div
