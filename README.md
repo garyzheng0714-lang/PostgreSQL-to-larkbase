@@ -225,14 +225,16 @@ CORS_ORIGINS=["https://pg2base-ui.example.com","https://feishu.cn","https://www.
 
 ## 接入多维表格
 
+**当前线上服务地址：`https://pg2bitable.garyzheng.com/meta.json`**
+
 多维表格侧的文案和入口可能会随版本变化，但大致流程是一样的：
 
 1. 打开一个多维表格
-2. 找到“从外部数据导入 / 数据连接器 / 自定义连接器”之类的入口
-3. 填入你的连接器地址：
+2. 找到”从外部数据导入 / 数据连接器 / 自定义连接器”之类的入口
+3. 填入连接器服务地址：
 
 ```text
-https://pg2base.example.com/meta.json
+https://pg2bitable.garyzheng.com/meta.json
 ```
 
 4. 如果界面要求填写请求签名密钥，填写与 `SECRET_KEY` 相同的值

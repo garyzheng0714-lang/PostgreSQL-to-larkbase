@@ -6,9 +6,9 @@ import type {
   StepKey,
 } from "../types";
 
-const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST ?? "shared-postgres";
-const DEFAULT_PORT = Number(import.meta.env.VITE_DEFAULT_PORT ?? 5432);
-const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME ?? "admin";
+export const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST ?? "shared-postgres";
+export const DEFAULT_PORT = Number(import.meta.env.VITE_DEFAULT_PORT ?? 5432);
+export const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME ?? "admin";
 const DEFAULT_SCHEMA = import.meta.env.VITE_DEFAULT_SCHEMA ?? "public";
 
 const STEPS: StepKey[] = ["connection", "tables"];
@@ -16,9 +16,9 @@ const STEPS: StepKey[] = ["connection", "tables"];
 export function useConfig() {
   const [currentStep, setCurrentStep] = useState(0);
   const [connection, setConnection] = useState<ConnectionInfo>({
-    host: DEFAULT_HOST,
+    host: "",
     port: DEFAULT_PORT,
-    username: DEFAULT_USERNAME,
+    username: "",
     password: "",
     database: "",
     ssl_mode: "disable",
@@ -39,9 +39,9 @@ export function useConfig() {
 
   const buildConfigs = useCallback((): DatasourceConfig[] => {
     return selectedTables.map((item) => ({
-      host: connection.host,
-      port: connection.port,
-      username: connection.username,
+      host: connection.host || DEFAULT_HOST,
+      port: connection.port || DEFAULT_PORT,
+      username: connection.username || DEFAULT_USERNAME,
       password: connection.password,
       database: item.database,
       mode: "table" as const,
