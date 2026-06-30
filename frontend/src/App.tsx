@@ -51,8 +51,12 @@ export default function App() {
      仅在高度真正变化时调用，避免 ResizeObserver 抖动与冗余 SDK 调用。 */
   const lastHRef = useRef(0);
   useLayoutEffect(() => {
+    // 必须等 SDK 就绪再建立同步：否则首次 resize 是空操作却记下了高度，
+    // 等 SDK 就绪后高度没变被去抖跳过 → iframe 卡在初始高不自适应。
+    if (!bitable.ready) return;
     const el = appRef.current;
     if (!el) return;
+    lastHRef.current = 0; // 就绪后强制首次同步一次
     const sync = () => {
       const raw = Math.ceil(el.getBoundingClientRect().height) + 8;
       const h = Math.max(226, Math.min(606, raw));
@@ -64,7 +68,7 @@ export default function App() {
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [bitable]);
+  }, [bitable.ready, bitable.resizeContainer]);
 
   /* 动画守卫：标签页隐藏时 gsap 的 rAF 会冻结，可能把元素卡在中途透明度。
      隐藏或用户偏好减少动效时，直接跳过动画，元素留在 CSS 默认（opacity 1 可见态）。 */

@@ -11,23 +11,23 @@
   --geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
     Consolas, monospace;
 
-  /* 亮色（暖白底，近黑字，纯黑主按钮） */
-  --db-bg: #f6f6f4;
+  /* 亮色（Vercel 风：纯中性灰白，纯黑主按钮，无任何暖色调） */
+  --db-bg: #fafafa;
   --db-card: #ffffff;
-  --db-card-2: #fbfbfa;
-  --db-border: rgba(0, 0, 0, 0.09);
-  --db-border-strong: rgba(0, 0, 0, 0.16);
-  --db-text: #1a1a18;
-  --db-text-2: #6b6b67;
-  --db-text-3: #9a9a95;
-  --db-accent: #16150f; /* 主按钮/强调：近黑 */
+  --db-card-2: #fafafa;
+  --db-border: rgba(0, 0, 0, 0.08);
+  --db-border-strong: rgba(0, 0, 0, 0.18);
+  --db-text: #171717;
+  --db-text-2: #666666;
+  --db-text-3: #999999;
+  --db-accent: #000000; /* 主按钮/强调：纯黑 */
   --db-accent-text: #ffffff;
-  --db-fill: #f3f3f0; /* 芯片/弱填充 */
-  --db-fill-hover: #ececea;
-  --db-danger: #c2410c;
-  --db-danger-bg: rgba(194, 65, 12, 0.08);
-  --db-ok: #3f6212;
-  --db-ring: rgba(0, 0, 0, 0.55);
+  --db-fill: #f2f2f2; /* 芯片/弱填充 */
+  --db-fill-hover: #ebebeb;
+  --db-danger: #e5484d;
+  --db-danger-bg: rgba(229, 72, 77, 0.08);
+  --db-ok: #18a957;
+  --db-ring: rgba(0, 0, 0, 0.6);
 
   --db-radius: 12px;
   --db-radius-sm: 9px;
@@ -38,22 +38,22 @@
 }
 
 body[theme-mode="dark"] {
-  --db-bg: #1a1a19;
-  --db-card: #242422;
-  --db-card-2: #1f1f1e;
+  --db-bg: #0a0a0a;
+  --db-card: #171717;
+  --db-card-2: #141414;
   --db-border: rgba(255, 255, 255, 0.1);
   --db-border-strong: rgba(255, 255, 255, 0.2);
-  --db-text: #ededeb;
-  --db-text-2: #a3a39d;
-  --db-text-3: #6f6f6a;
-  --db-accent: #f2f2ee; /* 暗色下主按钮反相：浅底深字 */
-  --db-accent-text: #16150f;
-  --db-fill: #2e2e2c;
-  --db-fill-hover: #363633;
-  --db-danger: #f0875a;
-  --db-danger-bg: rgba(240, 135, 90, 0.12);
-  --db-ok: #a3c267;
-  --db-ring: rgba(255, 255, 255, 0.65);
+  --db-text: #ededed;
+  --db-text-2: #a1a1a1;
+  --db-text-3: #707070;
+  --db-accent: #ffffff; /* 暗色下主按钮反相：纯白底黑字 */
+  --db-accent-text: #000000;
+  --db-fill: #262626;
+  --db-fill-hover: #333333;
+  --db-danger: #ff6166;
+  --db-danger-bg: rgba(255, 97, 102, 0.12);
+  --db-ok: #4cc366;
+  --db-ring: rgba(255, 255, 255, 0.7);
   --db-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -16px rgba(0, 0, 0, 0.6);
   --db-shadow-pop: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 12px 32px -8px rgba(0, 0, 0, 0.6);
 }
