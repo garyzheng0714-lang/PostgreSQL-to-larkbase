@@ -1,4 +1,4 @@
-import { Banner } from "@douyinfe/semi-ui";
+import { AlertCircle, X } from "lucide-react";
 
 interface ErrorBannerProps {
   message: string | null;
@@ -7,14 +7,20 @@ interface ErrorBannerProps {
 
 export function ErrorBanner({ message, onClose }: ErrorBannerProps) {
   if (!message) return null;
-
   return (
-    <Banner
-      type="danger"
-      description={message}
-      closeIcon
-      onClose={onClose}
-      style={{ marginBottom: 16 }}
-    />
+    <div className="db-error" role="alert">
+      <AlertCircle />
+      <span style={{ flex: 1 }}>{message}</span>
+      {onClose && (
+        <button
+          type="button"
+          className="db-error__close"
+          aria-label="关闭"
+          onClick={onClose}
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
   );
 }

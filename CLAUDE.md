@@ -1,7 +1,7 @@
-# PostgreSQL-to-LarkBase Connector
+# FBIF DataBridge · 数据桥
 
 ## Project Overview
-飞书多维表格自定义数据连接器，将 PostgreSQL 数据同步到飞书 Bitable。
+飞书多维表格自定义数据连接器，把数据库同步到飞书 Bitable。当前首发适配 PostgreSQL（RDS），架构预留多数据源扩展（见 `backend/src/adapters/`）。
 
 ## Architecture
 - **Frontend**: React + Vite + Semi UI (`frontend/`)，作为飞书 iframe 内的配置页面

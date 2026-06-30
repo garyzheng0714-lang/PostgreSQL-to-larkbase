@@ -1,5 +1,5 @@
 {
-  "name": "pg-to-larkbase-frontend",
+  "name": "fbif-databridge-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,8 +10,12 @@
   },
   "dependencies": {
     "@douyinfe/semi-ui": "^2.76.0",
+    "@fontsource/geist-mono": "^5.2.8",
+    "@fontsource/geist-sans": "^5.2.5",
     "@lark-base-open/connector-api": "^0.1.1",
     "axios": "^1.7.0",
+    "gsap": "^3.15.0",
+    "lucide-react": "^1.22.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },

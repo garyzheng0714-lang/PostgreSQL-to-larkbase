@@ -46,18 +46,23 @@ export function useBitable() {
       return null;
     }, []);
 
-  const savedRef = useRef(false);
+  const savingRef = useRef(false);
 
   const saveConfig = useCallback(
     async (config: DatasourceConfig): Promise<void> => {
-      if (savedRef.current) return;
-      savedRef.current = true;
-      if (!sdkRef.current) {
-        return;
+      // 防并发重复提交；但失败后必须允许重试 —— 故仅在成功后保持锁，失败时释放。
+      if (savingRef.current) return;
+      savingRef.current = true;
+      try {
+        if (!sdkRef.current) return;
+        await sdkRef.current.saveConfigAndGoNext({
+          datasourceConfig: JSON.stringify(config),
+        });
+        // 成功：保持锁，避免 SDK 跳转后重复保存
+      } catch (e) {
+        savingRef.current = false; // 失败：释放锁，允许重试
+        throw e;
       }
-      await sdkRef.current.saveConfigAndGoNext({
-        datasourceConfig: JSON.stringify(config),
-      });
     },
     [],
   );

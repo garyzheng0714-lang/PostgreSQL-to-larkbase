@@ -1,68 +1,57 @@
 import { useCallback, useState } from "react";
-import type {
-  BatchSyncItem,
-  ConnectionInfo,
-  DatasourceConfig,
-  StepKey,
-} from "../types";
+import type { ConnectionInfo, DatasourceConfig } from "../types";
+import { DEFAULT_SOURCE } from "../lib/sourceTypes";
 
-export const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST ?? "shared-postgres";
 export const DEFAULT_PORT = Number(import.meta.env.VITE_DEFAULT_PORT ?? 5432);
-export const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME ?? "admin";
 const DEFAULT_SCHEMA = import.meta.env.VITE_DEFAULT_SCHEMA ?? "public";
 
-const STEPS: StepKey[] = ["connection", "tables"];
+const EMPTY_CONN: ConnectionInfo = {
+  host: "",
+  port: DEFAULT_PORT,
+  username: "",
+  password: "",
+  database: "",
+  ssl_mode: "disable",
+};
 
 export function useConfig() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [connection, setConnection] = useState<ConnectionInfo>({
-    host: "",
-    port: DEFAULT_PORT,
-    username: "",
-    password: "",
-    database: "",
-    ssl_mode: "disable",
-  });
-  const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
-  const [selectedTables, setSelectedTables] = useState<BatchSyncItem[]>([]);
-  const stepKey = STEPS[currentStep];
+  const [sourceType, setSourceType] = useState<string>(DEFAULT_SOURCE.id);
+  const [connection, setConnection] = useState<ConnectionInfo>(EMPTY_CONN);
+  const [schemaName, setSchemaName] = useState<string>(DEFAULT_SCHEMA);
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
-  const goNext = useCallback(() => {
-    setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1));
-  }, []);
-
-  const goBack = useCallback(() => {
-    setCurrentStep((s) => Math.max(s - 1, 0));
-  }, []);
-
-  const buildConfigs = useCallback((): DatasourceConfig[] => {
-    return selectedTables.map((item) => ({
-      host: connection.host || DEFAULT_HOST,
+  /** 协议硬事实：一份配置 = 一张同步表，故 buildConfig 只产单个 config。 */
+  const buildConfig = useCallback((): DatasourceConfig | null => {
+    if (!selectedTable) return null;
+    // 所有可空字段显式 ?? null：connection 默认不含这些 key，undefined 会被
+    // JSON.stringify 静默丢弃，导致后端逐字段反序列化时缺字段。
+    return {
+      host: connection.host,
       port: connection.port || DEFAULT_PORT,
-      username: connection.username || DEFAULT_USERNAME,
+      username: connection.username,
       password: connection.password,
-      database: item.database,
-      mode: "table" as const,
-      schema_name: DEFAULT_SCHEMA,
-      table_name: item.tableName,
+      database: connection.database,
+      mode: "table",
+      schema_name: schemaName || DEFAULT_SCHEMA,
+      table_name: selectedTable,
       selected_fields: null,
       custom_sql: null,
       field_renames: null,
       number_formats: null,
       auto_sync: true,
-      ssl_mode: connection.ssl_mode,
-      ssl_root_cert: connection.ssl_root_cert,
-      ssl_cert: connection.ssl_cert,
-      ssl_key: connection.ssl_key,
-      connect_timeout: connection.connect_timeout,
-      query_timeout: connection.query_timeout,
-    }));
-  }, [connection, selectedTables]);
+      ssl_mode: connection.ssl_mode ?? "disable",
+      ssl_root_cert: connection.ssl_root_cert ?? null,
+      ssl_cert: connection.ssl_cert ?? null,
+      ssl_key: connection.ssl_key ?? null,
+      connect_timeout: connection.connect_timeout ?? null,
+      query_timeout: connection.query_timeout ?? null,
+    };
+  }, [connection, schemaName, selectedTable]);
 
   const loadFromConfig = useCallback((config: DatasourceConfig) => {
     setConnection({
       host: config.host,
-      port: config.port,
+      port: config.port || DEFAULT_PORT,
       username: config.username,
       password: config.password,
       database: config.database,
@@ -73,32 +62,28 @@ export function useConfig() {
       connect_timeout: config.connect_timeout,
       query_timeout: config.query_timeout,
     });
-    if (config.database) {
-      setSelectedDatabases([config.database]);
-    }
-    if (config.table_name) {
-      setSelectedTables([
-        {
-          database: config.database,
-          tableName: config.table_name,
-          tableType: "table",
-        },
-      ]);
-    }
+    if (config.schema_name) setSchemaName(config.schema_name);
+    if (config.table_name) setSelectedTable(config.table_name);
+  }, []);
+
+  const reset = useCallback(() => {
+    setConnection(EMPTY_CONN);
+    setSchemaName(DEFAULT_SCHEMA);
+    setSelectedTable(null);
+    setSourceType(DEFAULT_SOURCE.id);
   }, []);
 
   return {
-    currentStep,
-    stepKey,
+    sourceType,
+    setSourceType,
     connection,
     setConnection,
-    selectedDatabases,
-    setSelectedDatabases,
-    selectedTables,
-    setSelectedTables,
-    goNext,
-    goBack,
-    buildConfigs,
+    schemaName,
+    setSchemaName,
+    selectedTable,
+    setSelectedTable,
+    buildConfig,
     loadFromConfig,
+    reset,
   };
 }

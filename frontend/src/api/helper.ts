@@ -1,10 +1,6 @@
 import { apiClient } from "./client";
-import type {
-  ColumnInfo,
-  ConnectionInfo,
-  SQLPreviewResult,
-  TableInfo,
-} from "../types";
+import type { ConnectionInfo, TableInfo } from "../types";
+import { mockListTables, mockTestConnection, MOCK_ENABLED } from "./mock";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -23,6 +19,7 @@ export interface ConnectionTestResult {
 export async function testConnection(
   conn: ConnectionInfo
 ): Promise<ConnectionTestResult> {
+  if (MOCK_ENABLED) return mockTestConnection(conn);
   const { data } = await apiClient.post<ConnectionTestResult>(
     "/api/helper/test_connection",
     conn
@@ -30,52 +27,13 @@ export async function testConnection(
   return data;
 }
 
-export async function listDatabases(
-  conn: ConnectionInfo
-): Promise<string[]> {
-  const { data } = await apiClient.post<ApiResponse<string[]>>(
-    "/api/helper/databases",
-    conn
-  );
-  return data.data ?? [];
-}
-
-export async function listSchemas(
-  conn: ConnectionInfo
-): Promise<string[]> {
-  const { data } = await apiClient.post<ApiResponse<string[]>>(
-    "/api/helper/schemas",
-    conn
-  );
-  return data.data ?? [];
-}
-
 export async function listTables(
   conn: ConnectionInfo & { schema_name: string }
 ): Promise<TableInfo[]> {
+  if (MOCK_ENABLED) return mockListTables(conn);
   const { data } = await apiClient.post<ApiResponse<TableInfo[]>>(
     "/api/helper/tables",
     conn
   );
   return data.data ?? [];
-}
-
-export async function listColumns(
-  conn: ConnectionInfo & { schema_name: string; table_name: string }
-): Promise<ColumnInfo[]> {
-  const { data } = await apiClient.post<ApiResponse<ColumnInfo[]>>(
-    "/api/helper/columns",
-    conn
-  );
-  return data.data ?? [];
-}
-
-export async function previewSQL(
-  conn: ConnectionInfo & { sql: string }
-): Promise<ApiResponse<SQLPreviewResult>> {
-  const { data } = await apiClient.post<ApiResponse<SQLPreviewResult>>(
-    "/api/helper/preview_sql",
-    conn
-  );
-  return data;
 }

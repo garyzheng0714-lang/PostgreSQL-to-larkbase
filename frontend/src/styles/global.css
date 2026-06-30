@@ -1,131 +1,1002 @@
+/* ============================================================
+   FBIF DataBridge · 配置页设计层
+   单色 / Geist / 发丝边框 / 大留白（Codex/Notion 风）
+   亮暗双主题用 CSS 变量统一；Semi UI 仅承载下拉/搜索行为。
+   ============================================================ */
+
+/* ---------- 设计 token ---------- */
+:root {
+  --geist: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, monospace;
+
+  /* 亮色（暖白底，近黑字，纯黑主按钮） */
+  --db-bg: #f6f6f4;
+  --db-card: #ffffff;
+  --db-card-2: #fbfbfa;
+  --db-border: rgba(0, 0, 0, 0.09);
+  --db-border-strong: rgba(0, 0, 0, 0.16);
+  --db-text: #1a1a18;
+  --db-text-2: #6b6b67;
+  --db-text-3: #9a9a95;
+  --db-accent: #16150f; /* 主按钮/强调：近黑 */
+  --db-accent-text: #ffffff;
+  --db-fill: #f3f3f0; /* 芯片/弱填充 */
+  --db-fill-hover: #ececea;
+  --db-danger: #c2410c;
+  --db-danger-bg: rgba(194, 65, 12, 0.08);
+  --db-ok: #3f6212;
+  --db-ring: rgba(0, 0, 0, 0.55);
+
+  --db-radius: 12px;
+  --db-radius-sm: 9px;
+  --db-radius-lg: 16px;
+  --db-field-h: 44px;
+  --db-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -16px rgba(0, 0, 0, 0.18);
+  --db-shadow-pop: 0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 12px 32px -8px rgba(0, 0, 0, 0.18);
+}
+
+body[theme-mode="dark"] {
+  --db-bg: #1a1a19;
+  --db-card: #242422;
+  --db-card-2: #1f1f1e;
+  --db-border: rgba(255, 255, 255, 0.1);
+  --db-border-strong: rgba(255, 255, 255, 0.2);
+  --db-text: #ededeb;
+  --db-text-2: #a3a39d;
+  --db-text-3: #6f6f6a;
+  --db-accent: #f2f2ee; /* 暗色下主按钮反相：浅底深字 */
+  --db-accent-text: #16150f;
+  --db-fill: #2e2e2c;
+  --db-fill-hover: #363633;
+  --db-danger: #f0875a;
+  --db-danger-bg: rgba(240, 135, 90, 0.12);
+  --db-ok: #a3c267;
+  --db-ring: rgba(255, 255, 255, 0.65);
+  --db-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -16px rgba(0, 0, 0, 0.6);
+  --db-shadow-pop: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- 基础 ---------- */
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
-  background: transparent;
+  font-family: var(--geist);
+  background: var(--db-bg);
+  color: var(--db-text);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv01", "ss01";
 }
 
 #root {
   min-height: 100vh;
 }
 
-.step-nav {
+.db-app {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 18px 22px 26px;
+}
+
+@media (max-width: 480px) {
+  .db-app {
+    padding: 14px 14px 20px;
+  }
+}
+
+/* ---------- 顶部头 ---------- */
+.db-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 16px 0 20px;
-}
-
-.step-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--semi-color-text-2);
-  white-space: nowrap;
-}
-
-.step-item.active {
-  color: var(--semi-color-primary);
-  font-weight: 600;
-}
-
-.step-item.done {
-  color: var(--semi-color-success);
-}
-
-.step-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-  background: var(--semi-color-fill-1);
-  color: var(--semi-color-text-2);
-}
-
-.step-item.active .step-dot {
-  background: var(--semi-color-primary);
-  color: #fff;
-}
-
-.step-item.done .step-dot {
-  background: var(--semi-color-success);
-  color: #fff;
-}
-
-.step-line {
-  width: 32px;
-  height: 1px;
-  background: var(--semi-color-border);
-  margin: 0 8px;
-  flex-shrink: 0;
-}
-
-.form-row {
+  justify-content: space-between;
   margin-bottom: 14px;
+  padding: 0 2px;
 }
 
-.form-label {
-  display: block;
-  font-size: 13px;
+.db-head__title {
+  font-size: 12.5px;
   font-weight: 500;
-  color: var(--semi-color-text-0);
-  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+  color: var(--db-text-3);
 }
 
-.form-label .required {
-  color: var(--semi-color-danger);
-  margin-right: 2px;
+.db-head__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--db-text-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 7px;
+  transition: color 0.15s, background 0.15s;
 }
 
-.form-row-inline {
-  display: grid;
-  grid-template-columns: 1fr 120px;
+.db-head__reset:hover {
+  color: var(--db-text);
+  background: var(--db-fill);
+}
+
+.db-head__reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.db-head__reset svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------- 卡片 ---------- */
+.db-card {
+  background: var(--db-card);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-lg);
+  box-shadow: var(--db-shadow);
+  padding: 26px 26px 22px;
+}
+
+@media (max-width: 480px) {
+  .db-card {
+    padding: 20px 18px 18px;
+  }
+}
+
+.db-card__title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--db-text);
+  margin: 0;
+}
+
+.db-card__subtitle {
+  font-size: 12.5px;
+  color: var(--db-text-2);
+  margin: 4px 0 0;
+}
+
+.db-card__head {
+  margin-bottom: 20px;
+}
+
+/* ---------- 字段块 ---------- */
+.db-field {
+  margin-bottom: 16px;
+}
+
+.db-field:last-child {
+  margin-bottom: 0;
+}
+
+.db-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--db-text-2);
+  margin-bottom: 7px;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- 通用受控外框（输入/选择器同款发丝边框盒子） ---------- */
+.db-box {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--db-field-h);
+  padding: 0 14px;
+  background: var(--db-card);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.db-box:hover {
+  border-color: var(--db-border-strong);
+}
+
+.db-box--focus,
+.db-box:focus-within {
+  border-color: var(--db-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-ring) 12%, transparent);
+}
+
+.db-box--button {
+  cursor: pointer;
+  justify-content: space-between;
+}
+
+.db-box--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.db-input:disabled {
+  color: var(--db-text-2);
+  cursor: not-allowed;
+}
+
+/* URI 输入 */
+.db-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--geist-mono);
+  font-size: 13px;
+  color: var(--db-text);
+  padding: 12px 0;
+  letter-spacing: -0.01em;
+}
+
+.db-input::placeholder {
+  color: var(--db-text-3);
+}
+
+/* 数据源类型芯片 */
+.db-srcchip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--db-fill);
+  color: var(--db-text-2);
+  font-family: var(--geist-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.db-src__name {
+  flex: 1;
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--db-text);
+  text-align: left;
+}
+
+.db-src__chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--db-text-3);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+/* ---------- AI 帮填入口行 ---------- */
+.db-ai {
+  margin-top: 10px;
+}
+
+.db-ai__trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  background: var(--db-card-2);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--db-text-2);
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.db-ai__trigger:hover {
+  border-color: var(--db-border-strong);
+  color: var(--db-text);
+  background: var(--db-fill);
+}
+
+.db-ai__glyph {
+  width: 15px;
+  height: 15px;
+  color: var(--db-text-3);
+  flex-shrink: 0;
+}
+
+.db-ai__trigger:hover .db-ai__glyph {
+  color: var(--db-text);
+}
+
+.db-ai__chev {
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--db-text-3);
+  transition: transform 0.2s;
+}
+
+.db-ai__trigger[aria-expanded="true"] .db-ai__chev {
+  transform: rotate(180deg);
+}
+
+/* 展开面板 */
+.db-ai__panel {
+  overflow: hidden;
+  border: 1px solid var(--db-border);
+  border-top: none;
+  border-radius: 0 0 var(--db-radius) var(--db-radius);
+  margin-top: -1px;
+  background: var(--db-card-2);
+}
+
+.db-ai__panel-inner {
+  padding: 14px 14px 16px;
+}
+
+.db-ai__steps {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.db-ai__steps li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--db-text-2);
+  counter-increment: step;
+}
+
+.db-ai__steps li:last-child {
+  margin-bottom: 0;
+}
+
+.db-ai__steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--db-fill);
+  color: var(--db-text-2);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.db-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  background: var(--db-card);
+  border: 1px solid var(--db-border-strong);
+  border-radius: var(--db-radius-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--db-text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.db-copy:hover {
+  background: var(--db-fill);
+}
+
+.db-copy:active {
+  transform: scale(0.98);
+}
+
+.db-copy svg {
+  width: 14px;
+  height: 14px;
+}
+
+.db-copy--done {
+  color: var(--db-ok);
+  border-color: color-mix(in srgb, var(--db-ok) 45%, transparent);
+}
+
+/* ---------- 手动渐进展开 ---------- */
+.db-manual__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-size: 12.5px;
+  color: var(--db-text-3);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.db-manual__toggle:hover {
+  color: var(--db-text-2);
+}
+
+.db-manual__toggle svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.2s;
+}
+
+.db-manual__toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.db-manual {
+  overflow: hidden;
+}
+
+.db-manual__grid {
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.footer-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--semi-color-border);
+.db-row2 {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 10px;
 }
 
-.config-summary-card {
-  background: var(--semi-color-fill-0);
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-bottom: 14px;
+.db-row2--even {
+  grid-template-columns: 1fr 1fr;
 }
 
-.config-summary-row {
+@media (max-width: 420px) {
+  .db-row2,
+  .db-row2--even {
+    grid-template-columns: 1fr;
+  }
+}
+
+.db-sublabel {
+  display: block;
+  font-size: 11px;
+  color: var(--db-text-3);
+  margin-bottom: 4px;
+}
+
+/* ---------- 按钮 ---------- */
+.db-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.db-actions--split {
+  justify-content: space-between;
+}
+
+.db-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--db-radius-sm);
+  font-family: var(--geist);
+  font-size: 13.5px;
+  font-weight: 550;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.08s,
+    opacity 0.15s;
+  white-space: nowrap;
+}
+
+.db-btn:active {
+  transform: scale(0.985);
+}
+
+.db-btn--primary {
+  background: var(--db-accent);
+  color: var(--db-accent-text);
+}
+
+.db-btn--primary:hover {
+  opacity: 0.88;
+}
+
+.db-btn--ghost {
+  background: transparent;
+  color: var(--db-text-2);
+  border-color: var(--db-border);
+}
+
+.db-btn--ghost:hover {
+  background: var(--db-fill);
+  color: var(--db-text);
+}
+
+.db-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  transform: none;
+}
+
+.db-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.db-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: db-spin 0.6s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes db-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- 连接态横幅 ---------- */
+.db-conn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  background: var(--db-card-2);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  margin-bottom: 18px;
+}
+
+.db-conn__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--db-ok);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-ok) 18%, transparent);
+}
+
+.db-conn__text {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
-}
-
-.config-summary-row .label {
-  color: var(--semi-color-text-2);
-}
-
-.config-summary-row .value {
-  color: var(--semi-color-text-0);
+  color: var(--db-text);
   font-weight: 500;
-  max-width: 60%;
-  text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.db-conn__meta {
+  font-size: 11.5px;
+  color: var(--db-text-3);
+  font-family: var(--geist-mono);
+  flex-shrink: 0;
+}
+
+.db-conn__edit {
+  background: none;
+  border: none;
+  color: var(--db-text-3);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.db-conn__edit:hover {
+  color: var(--db-text);
+  background: var(--db-fill);
+}
+
+.db-conn__edit svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- 错误条 ---------- */
+.db-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  background: var(--db-danger-bg);
+  border: 1px solid color-mix(in srgb, var(--db-danger) 30%, transparent);
+  border-radius: var(--db-radius-sm);
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--db-danger);
+}
+
+.db-error svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.db-error__close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.db-error__close:hover {
+  opacity: 1;
+}
+
+/* ---------- 空态 / 提示 ---------- */
+.db-hint {
+  font-size: 12px;
+  color: var(--db-text-3);
+  line-height: 1.55;
+}
+
+.db-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--db-text-3);
+}
+
+.db-empty svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.6;
+}
+
+.db-empty__text {
+  font-size: 12.5px;
+}
+
+/* ---------- 表计数 ---------- */
+.db-tablecount {
+  font-size: 11.5px;
+  color: var(--db-text-3);
+  margin-top: 7px;
+}
+
+/* ============================================================
+   Semi UI token 覆盖 —— 让 Select 下拉融入单色设计
+   ============================================================ */
+.db-app,
+.semi-portal {
+  --semi-color-primary: var(--db-accent);
+  --semi-color-primary-hover: var(--db-accent);
+  --semi-color-primary-active: var(--db-accent);
+  --semi-border-radius-small: 8px;
+  --semi-border-radius-medium: 12px;
+}
+
+/* Semi Select 触发器贴合 .db-box 视觉 */
+.db-select.semi-select {
+  width: 100%;
+  min-height: var(--db-field-h);
+  height: var(--db-field-h);
+  border-radius: var(--db-radius);
+  border: 1px solid var(--db-border);
+  background: var(--db-card);
+  box-shadow: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: var(--geist);
+}
+
+.db-select.semi-select:hover {
+  border-color: var(--db-border-strong);
+}
+
+.db-select.semi-select.semi-select-focus,
+.db-select.semi-select-open {
+  border-color: var(--db-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-ring) 12%, transparent);
+}
+
+.db-select .semi-select-selection {
+  font-size: 14px;
+  color: var(--db-text);
+  padding-left: 4px;
+}
+
+.db-select .semi-input,
+.db-select .semi-select-selection-text {
+  font-size: 14px;
+  color: var(--db-text);
+}
+
+/* 下拉浮层 */
+.db-dropdown.semi-select-option-list,
+.semi-select-popover .semi-select-option-list {
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: var(--db-shadow-pop);
+  border: 1px solid var(--db-border);
+  background: var(--db-card);
+}
+
+.semi-select-option {
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--db-text);
+  padding: 8px 10px;
+}
+
+.semi-select-option-selected {
+  background: var(--db-fill);
+  font-weight: 600;
+}
+
+.semi-select-option:hover {
+  background: var(--db-fill-hover);
+}
+
+/* 即将支持的禁用项 */
+.semi-select-option-disabled {
+  color: var(--db-text-3);
+  cursor: default;
+}
+
+/* 下拉内搜索框聚焦改单色（去掉 Semi 默认蓝环） */
+.semi-select-popover .semi-input-wrapper:focus-within,
+.semi-select-popover .semi-input-wrapper-focus,
+.db-dropdown .semi-input-wrapper:focus-within,
+.db-dropdown .semi-input-wrapper-focus {
+  border-color: var(--db-ring) !important;
+  box-shadow: none !important;
+}
+
+.semi-select-popover .semi-input-wrapper {
+  border-radius: 9px;
+  background: var(--db-fill);
+  border-color: transparent;
+}
+
+/* ---------- gsap 入场初态（防闪烁） ---------- */
+.db-animate-in {
+  opacity: 0;
+}
+
+/* 尊重减少动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .db-animate-in {
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   组件细节补充
+   ============================================================ */
+
+/* ---------- 数据源类型自建下拉 ---------- */
+.db-srcmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 6px;
+  background: var(--db-card);
+  border: 1px solid var(--db-border);
+  border-radius: 12px;
+  box-shadow: var(--db-shadow-pop);
+  animation: db-pop 0.16s ease;
+}
+
+@keyframes db-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.db-srcmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.db-srcmenu__item:hover:not(.is-disabled) {
+  background: var(--db-fill-hover);
+}
+
+.db-srcmenu__item.is-selected {
+  background: var(--db-fill);
+}
+
+.db-srcmenu__item.is-active-opt {
+  background: var(--db-fill-hover);
+}
+
+.db-srcmenu__item.is-disabled {
+  cursor: default;
+}
+
+.db-srcmenu__item.is-disabled .db-srcchip,
+.db-srcmenu__item.is-disabled .db-src__name {
+  color: var(--db-text-3);
+  opacity: 0.7;
+}
+
+.db-srcmenu__soon {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--db-text-3);
+  padding: 2px 7px;
+  border: 1px solid var(--db-border);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ---------- AI 帮填展开（grid-rows 0fr→1fr，无需测量） ---------- */
+.db-ai__wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s ease;
+}
+
+.db-ai__wrap.is-open {
+  grid-template-rows: 1fr;
+}
+
+.db-ai__panel {
+  overflow: hidden;
+  min-height: 0;
+  border: 1px solid var(--db-border);
+  border-top: none;
+  border-radius: 0 0 var(--db-radius) var(--db-radius);
+  background: var(--db-card-2);
+}
+
+.db-ai__wrap:not(.is-open) .db-ai__panel {
+  border-color: transparent;
+}
+
+.db-ai__trigger[aria-expanded="true"] {
+  border-radius: var(--db-radius) var(--db-radius) 0 0;
+}
+
+/* ---------- 手动渐进展开 ---------- */
+.db-manual {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s ease;
+}
+
+.db-manual.is-open {
+  grid-template-rows: 1fr;
+}
+
+.db-manual__rows {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ---------- SSL 分段控件 ---------- */
+.db-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--db-fill);
+  border-radius: var(--db-radius-sm);
+}
+
+.db-seg__item {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--db-text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.db-seg__item.is-active {
+  background: var(--db-card);
+  color: var(--db-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-weight: 500;
+}
+
+/* ---------- 表选项（Semi Select renderOptionItem） ---------- */
+.db-topt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.db-topt.is-foc {
+  background: var(--db-fill-hover);
+}
+
+.db-topt.is-sel {
+  background: var(--db-fill);
+}
+
+.db-topt__icon {
+  width: 15px;
+  height: 15px;
+  color: var(--db-text-3);
+  flex-shrink: 0;
+}
+
+.db-topt__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--db-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-topt__rows {
+  font-size: 11px;
+  color: var(--db-text-3);
+  font-family: var(--geist-mono);
+  flex-shrink: 0;
+}
+
+.db-topt__tag {
+  font-size: 10.5px;
+  color: var(--db-text-2);
+  background: var(--db-fill);
+  padding: 1px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }

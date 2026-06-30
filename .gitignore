@@ -43,3 +43,9 @@ htmlcov/
 # Screenshots
 *.png
 !frontend/public/*.png
+
+# Graphify 生成的知识图谱索引（非源码）
+graphify-out/
+
+# 二进制归档（官方 demo zip 等，可重新下载，不入库）
+*.zip

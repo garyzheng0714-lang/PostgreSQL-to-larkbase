@@ -1,9 +1,11 @@
-# PostgreSQL-to-larkbase
+# FBIF DataBridge · 数据桥
 
 ![类型](https://img.shields.io/badge/%E7%B1%BB%E5%9E%8B-%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5%E5%99%A8-2563eb)
 ![技术栈](https://img.shields.io/badge/%E6%8A%80%E6%9C%AF%E6%A0%88-FastAPI%20%7C%20React%20%7C%20PostgreSQL-0f766e)
 ![状态](https://img.shields.io/badge/%E7%8A%B6%E6%80%81-%E5%8F%AF%E8%87%AA%E9%83%A8%E7%BD%B2-16a34a)
 ![README](https://img.shields.io/badge/README-%E4%B8%AD%E6%96%87-111827)
+
+把数据库同步到飞书多维表格的自定义连接器。当前首发适配 PostgreSQL（RDS），架构预留多数据源扩展。
 
 飞书多维表格自定义连接器，将 PostgreSQL 表、视图或自定义 SQL 查询结果按连接器协议同步到多维表格。
 
