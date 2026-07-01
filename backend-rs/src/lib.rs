@@ -7,6 +7,7 @@
 pub mod adapter;
 pub mod config;
 pub mod handlers;
+pub mod metadata_cache;
 pub mod protocol;
 pub mod server;
 pub mod signature;

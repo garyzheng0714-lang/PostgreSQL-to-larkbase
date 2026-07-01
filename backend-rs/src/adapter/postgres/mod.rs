@@ -5,17 +5,20 @@ pub mod pool;
 pub mod tls;
 pub mod type_map;
 
+use std::net::IpAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use serde_json::Value;
-use tokio_postgres::error::SqlState;
+use tokio::net::lookup_host;
 use tokio_postgres::SimpleQueryMessage;
+use tokio_postgres::error::SqlState;
 
 use super::{ColumnInfo, ConnectionResult, DataSourceAdapter, FetchedRow, TableInfo};
 use crate::config::Config;
-use crate::protocol::request::DatasourceConfig;
 use crate::protocol::ConnectorError;
+use crate::protocol::request::DatasourceConfig;
 use pool::PoolManager;
 
 /// 双引号包裹标识符并转义内部 `"`（防注入，纵深防御一层）。
@@ -23,13 +26,93 @@ fn quote_ident(s: &str) -> String {
     format!("\"{}\"", s.replace('"', "\"\""))
 }
 
+fn order_clause(order_fields: Option<&[String]>) -> String {
+    let Some(fields) = order_fields else {
+        return String::new();
+    };
+    if fields.is_empty() {
+        return String::new();
+    }
+    let cols = fields
+        .iter()
+        .map(|c| format!("{} ASC", quote_ident(c)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(" ORDER BY {cols}")
+}
+
+fn build_fetch_query(
+    offset: i64,
+    limit: i64,
+    schema: &str,
+    table: Option<&str>,
+    selected_fields: Option<&[String]>,
+    custom_sql: Option<&str>,
+    order_fields: Option<&[String]>,
+) -> Result<String, ConnectorError> {
+    if let Some(sql) = custom_sql {
+        let sql = sql.trim_end_matches(';');
+        return Ok(format!(
+            "SELECT * FROM ({sql}) AS _sub OFFSET {offset} LIMIT {limit}"
+        ));
+    }
+
+    let cols = match selected_fields {
+        Some(f) if !f.is_empty() => f
+            .iter()
+            .map(|c| quote_ident(c))
+            .collect::<Vec<_>>()
+            .join(", "),
+        _ => "*".to_string(),
+    };
+    let table = table.ok_or(ConnectorError::TableNotFound)?;
+    let order = order_clause(order_fields);
+    Ok(format!(
+        "SELECT {cols} FROM {}.{}{order} OFFSET {offset} LIMIT {limit}",
+        quote_ident(schema),
+        quote_ident(table)
+    ))
+}
+
+fn is_private_or_local_addr(addr: &IpAddr) -> bool {
+    match addr {
+        IpAddr::V4(ip) => {
+            ip.is_private()
+                || ip.is_loopback()
+                || ip.is_link_local()
+                || ip.is_unspecified()
+                || ip.octets()[0] == 100 && (64..=127).contains(&ip.octets()[1])
+        }
+        IpAddr::V6(ip) => {
+            ip.is_loopback()
+                || ip.is_unspecified()
+                || (ip.segments()[0] & 0xfe00) == 0xfc00 // unique local fc00::/7
+                || (ip.segments()[0] & 0xffc0) == 0xfe80 // link local fe80::/10
+        }
+    }
+}
+
+async fn host_resolves_to_private_or_local(host: &str, port: u16) -> bool {
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        return is_private_or_local_addr(&ip);
+    }
+    match tokio::time::timeout(Duration::from_secs(2), lookup_host((host, port))).await {
+        Ok(Ok(mut addrs)) => addrs.any(|addr| is_private_or_local_addr(&addr.ip())),
+        _ => false,
+    }
+}
+
 /// 把 tokio_postgres 错误映射到协议错误。
 fn map_pg_err(e: tokio_postgres::Error) -> ConnectorError {
     if let Some(code) = e.code() {
         return match *code {
-            SqlState::INVALID_CATALOG_NAME | SqlState::UNDEFINED_TABLE => ConnectorError::TableNotFound,
+            SqlState::INVALID_CATALOG_NAME | SqlState::UNDEFINED_TABLE => {
+                ConnectorError::TableNotFound
+            }
             SqlState::INSUFFICIENT_PRIVILEGE => ConnectorError::PermissionDenied(e.to_string()),
-            SqlState::SYNTAX_ERROR | SqlState::UNDEFINED_COLUMN => ConnectorError::InvalidSql(e.to_string()),
+            SqlState::SYNTAX_ERROR | SqlState::UNDEFINED_COLUMN => {
+                ConnectorError::InvalidSql(e.to_string())
+            }
             SqlState::QUERY_CANCELED => ConnectorError::QueryTimeout(e.to_string()),
             SqlState::INVALID_PASSWORD => ConnectorError::ConnectionFailed(e.to_string()),
             _ => ConnectorError::ConnectionFailed(e.to_string()),
@@ -66,7 +149,10 @@ impl DataSourceAdapter for PostgresAdapter {
             Ok(c) => c,
             Err(e) => {
                 let detail = e.to_string().to_lowercase();
-                let message = if detail.contains("password") || detail.contains("authentication") {
+                let private_or_local = host_resolves_to_private_or_local(&cfg.host, cfg.port).await;
+                let message = if private_or_local {
+                    "当前部署环境无法访问该内网/本地数据库地址，请改用公网地址或打通网络 / This deployment cannot reach the private/local database address; use a public endpoint or network bridge"
+                } else if detail.contains("password") || detail.contains("authentication") {
                     "用户名或密码错误 / Invalid username or password"
                 } else if detail.contains("does not exist") || detail.contains("catalog") {
                     "数据库不存在 / Database does not exist"
@@ -174,7 +260,12 @@ impl DataSourceAdapter for PostgresAdapter {
                 let est: i64 = r.get(2);
                 TableInfo {
                     name: r.get::<_, String>(0),
-                    kind: if table_type.contains("VIEW") { "view" } else { "table" }.into(),
+                    kind: if table_type.contains("VIEW") {
+                        "view"
+                    } else {
+                        "table"
+                    }
+                    .into(),
                     estimated_rows: est.max(0),
                 }
             })
@@ -241,26 +332,19 @@ impl DataSourceAdapter for PostgresAdapter {
         table: Option<&str>,
         selected_fields: Option<&[String]>,
         custom_sql: Option<&str>,
+        order_fields: Option<&[String]>,
     ) -> Result<Vec<FetchedRow>, ConnectorError> {
         let client = self.pools.acquire(cfg).await?;
         // offset/limit 为本服务校验过的 i64，内联安全（非用户文本）。
-        let query = if let Some(sql) = custom_sql {
-            let sql = sql.trim_end_matches(';');
-            format!("SELECT * FROM ({sql}) AS _sub OFFSET {offset} LIMIT {limit}")
-        } else {
-            let cols = match selected_fields {
-                Some(f) if !f.is_empty() => {
-                    f.iter().map(|c| quote_ident(c)).collect::<Vec<_>>().join(", ")
-                }
-                _ => "*".to_string(),
-            };
-            let table = table.ok_or(ConnectorError::TableNotFound)?;
-            format!(
-                "SELECT {cols} FROM {}.{} OFFSET {offset} LIMIT {limit}",
-                quote_ident(schema),
-                quote_ident(table)
-            )
-        };
+        let query = build_fetch_query(
+            offset,
+            limit,
+            schema,
+            table,
+            selected_fields,
+            custom_sql,
+            order_fields,
+        )?;
         simple_query_rows(&client, &query).await
     }
 
@@ -297,12 +381,18 @@ impl DataSourceAdapter for PostgresAdapter {
         simple_query_rows(&client, &query).await
     }
 
-    async fn validate_sql(&self, cfg: &DatasourceConfig, sql: &str) -> Result<bool, ConnectorError> {
+    async fn validate_sql(
+        &self,
+        cfg: &DatasourceConfig,
+        sql: &str,
+    ) -> Result<bool, ConnectorError> {
         let client = self.pools.acquire(cfg).await?;
         let sql = sql.trim_end_matches(';');
         match client.simple_query(&format!("EXPLAIN {sql}")).await {
             Ok(_) => Ok(true),
-            Err(e) => Err(ConnectorError::InvalidSql(format!("SQL validation failed: {e}"))),
+            Err(e) => Err(ConnectorError::InvalidSql(format!(
+                "SQL validation failed: {e}"
+            ))),
         }
     }
 
@@ -329,4 +419,77 @@ async fn simple_query_rows(
         }
     }
     Ok(rows)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn table_fetch_query_orders_by_primary_key_when_available() {
+        let query = build_fetch_query(
+            0,
+            1001,
+            "public",
+            Some("articles"),
+            None,
+            None,
+            Some(&["id".to_string()]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            query,
+            r#"SELECT * FROM "public"."articles" ORDER BY "id" ASC OFFSET 0 LIMIT 1001"#
+        );
+    }
+
+    #[test]
+    fn table_fetch_query_quotes_selected_columns_and_order_columns() {
+        let query = build_fetch_query(
+            1000,
+            500,
+            "tenant schema",
+            Some("Feed Items"),
+            Some(&["Title".to_string(), "created at".to_string()]),
+            None,
+            Some(&["created at".to_string(), "Title".to_string()]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            query,
+            r#"SELECT "Title", "created at" FROM "tenant schema"."Feed Items" ORDER BY "created at" ASC, "Title" ASC OFFSET 1000 LIMIT 500"#
+        );
+    }
+
+    #[test]
+    fn custom_sql_fetch_query_keeps_existing_protocol_shape() {
+        let query = build_fetch_query(
+            10,
+            20,
+            "ignored",
+            None,
+            None,
+            Some("select id from articles;"),
+            Some(&["id".to_string()]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            query,
+            "SELECT * FROM (select id from articles) AS _sub OFFSET 10 LIMIT 20"
+        );
+    }
+
+    #[test]
+    fn detects_private_and_local_addresses() {
+        assert!(is_private_or_local_addr(&"10.80.1.78".parse().unwrap()));
+        assert!(is_private_or_local_addr(&"172.16.0.1".parse().unwrap()));
+        assert!(is_private_or_local_addr(&"192.168.1.5".parse().unwrap()));
+        assert!(is_private_or_local_addr(&"127.0.0.1".parse().unwrap()));
+        assert!(!is_private_or_local_addr(
+            &"47.102.239.123".parse().unwrap()
+        ));
+    }
 }

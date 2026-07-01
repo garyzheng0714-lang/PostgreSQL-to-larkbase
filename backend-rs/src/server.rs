@@ -3,11 +3,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::Router;
 use axum::extract::{DefaultBodyLimit, FromRef, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
-use axum::Router;
 use metrics_exporter_prometheus::PrometheusHandle;
 use tower::ServiceBuilder;
 use tower_http::catch_panic::CatchPanicLayer;
@@ -18,6 +18,7 @@ use tower_http::trace::TraceLayer;
 use crate::adapter::registry::Registry;
 use crate::config::Config;
 use crate::handlers::{helper, meta, records, table_meta};
+use crate::metadata_cache::MetadataCache;
 use crate::protocol::ConnectorError;
 
 /// 请求体大小上限（16 MiB），与验签 extractor 一致。
@@ -31,6 +32,7 @@ pub struct AppState {
     pub cfg: Config,
     pub registry: Arc<Registry>,
     pub metrics: PrometheusHandle,
+    pub metadata_cache: Arc<MetadataCache>,
 }
 
 // 让 Config 可从 AppState 提取（VerifiedBody extractor 需要）。
@@ -51,7 +53,11 @@ async fn metrics_handler(State(state): State<AppState>) -> Response {
 }
 
 async fn ready() -> Response {
-    (StatusCode::OK, axum::Json(serde_json::json!({ "status": "ready" }))).into_response()
+    (
+        StatusCode::OK,
+        axum::Json(serde_json::json!({ "status": "ready" })),
+    )
+        .into_response()
 }
 
 /// 构建应用路由。
@@ -60,7 +66,12 @@ pub fn build_router(state: AppState) -> Router {
         // 最外层：捕获 panic → 200 协议错误
         .layer(CatchPanicLayer::custom(panic_to_protocol_error))
         .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::new().allow_methods(Any).allow_headers(Any).allow_origin(Any))
+        .layer(
+            CorsLayer::new()
+                .allow_methods(Any)
+                .allow_headers(Any)
+                .allow_origin(Any),
+        )
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         // 兜底超时返回 504（罕见的整体挂起）；查询级超时由 PG statement_timeout
         // 经 QUERY_CANCELED → QueryTimeout(200) 正常协议体返回。

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use fbif_databridge::adapter::postgres::PostgresAdapter;
 use fbif_databridge::adapter::registry::Registry;
 use fbif_databridge::config::Config;
+use fbif_databridge::metadata_cache::MetadataCache;
 use fbif_databridge::server::{self, AppState};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use tokio::signal;
@@ -15,7 +16,9 @@ async fn main() {
     // 结构化 JSON 日志；级别由 RUST_LOG 控制，默认 info。
     tracing_subscriber::fmt()
         .json()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     // 安装 rustls 默认加密 provider（ring）。
@@ -42,6 +45,7 @@ async fn main() {
         cfg,
         registry: Arc::new(registry),
         metrics,
+        metadata_cache: Arc::new(MetadataCache::new(std::time::Duration::from_secs(300), 512)),
     };
     let app = server::build_router(state);
 

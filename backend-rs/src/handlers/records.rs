@@ -1,16 +1,18 @@
 //! `POST /api/records` —— 返回分页记录（对应 Python `records.py`）。
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use axum::extract::State;
+use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use serde_json::Value;
 
-use crate::adapter::FetchedRow;
-use crate::protocol::response::{ok_body, RecordData, RecordsData};
+use crate::adapter::{DataSourceAdapter, FetchedRow};
+use crate::metadata_cache::{CachedMetadata, metadata_cache_key};
 use crate::protocol::ConnectorError;
+use crate::protocol::response::{RecordData, RecordsData, ok_body};
 use crate::server::AppState;
 use crate::signature::VerifiedBody;
 use crate::util::id_gen::{make_field_id, make_primary_id};
@@ -22,14 +24,41 @@ const RECORDS_TIMEOUT: Duration = Duration::from_secs(20);
 
 pub async fn records(State(state): State<AppState>, VerifiedBody(body): VerifiedBody) -> Response {
     metrics::counter!("databridge_requests_total", "endpoint" => "records").increment(1);
+    let started_at = Instant::now();
     let result = match tokio::time::timeout(RECORDS_TIMEOUT, handle(&state, &body)).await {
         Ok(r) => r,
-        Err(_) => Err(ConnectorError::QueryTimeout("records deadline exceeded".into())),
+        Err(_) => Err(ConnectorError::QueryTimeout(
+            "records deadline exceeded".into(),
+        )),
     };
+    json_response("records", started_at, result)
+}
+
+fn json_response(
+    endpoint: &'static str,
+    started_at: Instant,
+    result: Result<Value, ConnectorError>,
+) -> Response {
     match result {
-        Ok(v) => (axum::http::StatusCode::OK, Json(v)).into_response(),
+        Ok(v) => match serde_json::to_vec(&v) {
+            Ok(bytes) => {
+                metrics::histogram!("databridge_request_duration_seconds", "endpoint" => endpoint, "status" => "ok")
+                    .record(started_at.elapsed().as_secs_f64());
+                metrics::histogram!("databridge_response_bytes", "endpoint" => endpoint)
+                    .record(bytes.len() as f64);
+                (
+                    StatusCode::OK,
+                    [(header::CONTENT_TYPE, "application/json; charset=utf-8")],
+                    bytes,
+                )
+                    .into_response()
+            }
+            Err(e) => ConnectorError::Unknown(format!("serialize response: {e}")).into_response(),
+        },
         Err(e) => {
             metrics::counter!("databridge_errors_total", "endpoint" => "records", "code" => e.code().to_string()).increment(1);
+            metrics::histogram!("databridge_request_duration_seconds", "endpoint" => endpoint, "status" => "error")
+                .record(started_at.elapsed().as_secs_f64());
             e.into_response()
         }
     }
@@ -43,6 +72,56 @@ fn pk_part(row: &FetchedRow, pk: &str) -> String {
         Some((_, None)) => "None".to_string(),
         None => String::new(),
     }
+}
+
+async fn load_metadata(
+    state: &AppState,
+    adapter: &Arc<dyn DataSourceAdapter>,
+    config: &crate::protocol::request::DatasourceConfig,
+    custom_sql: Option<&str>,
+) -> Result<CachedMetadata, ConnectorError> {
+    let key = metadata_cache_key(config);
+    if let Some(cached) = state.metadata_cache.get(&key).await {
+        metrics::counter!("databridge_metadata_cache_total", "endpoint" => "records", "result" => "hit")
+            .increment(1);
+        return Ok(cached);
+    }
+
+    metrics::counter!("databridge_metadata_cache_total", "endpoint" => "records", "result" => "miss")
+        .increment(1);
+    let started_at = Instant::now();
+    let columns = if let Some(sql) = custom_sql {
+        adapter.get_sql_columns(config, sql).await?
+    } else {
+        adapter
+            .list_columns(
+                config,
+                &config.schema_name,
+                config.table_name.as_deref().unwrap_or(""),
+            )
+            .await?
+    };
+    let pk_columns = if custom_sql.is_none() && config.mode == "table" {
+        if let Some(t) = &config.table_name {
+            adapter
+                .get_primary_key_columns(config, &config.schema_name, t)
+                .await
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    metrics::histogram!("databridge_records_stage_seconds", "stage" => "metadata")
+        .record(started_at.elapsed().as_secs_f64());
+    let metadata = CachedMetadata {
+        columns,
+        pk_columns,
+    };
+    state.metadata_cache.insert(key, metadata.clone()).await;
+    Ok(metadata)
 }
 
 async fn handle(state: &AppState, body: &[u8]) -> Result<Value, ConnectorError> {
@@ -60,7 +139,10 @@ async fn handle(state: &AppState, body: &[u8]) -> Result<Value, ConnectorError> 
         .and_then(|v| v.as_i64())
         .unwrap_or(1000)
         .clamp(1, 1000); // 最小 1，避免 maxPageSize=0 时 next_offset 不前进导致死循环
-    let page_token = params.get("pageToken").and_then(|v| v.as_str()).unwrap_or("");
+    let page_token = params
+        .get("pageToken")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     let mut offset = 0i64;
     if !page_token.is_empty() {
@@ -86,6 +168,14 @@ async fn handle(state: &AppState, body: &[u8]) -> Result<Value, ConnectorError> 
         None
     };
 
+    let metadata = load_metadata(state, &adapter, &config, custom_sql).await?;
+    let order_fields = if config.mode == "table" && !metadata.pk_columns.is_empty() {
+        Some(metadata.pk_columns.as_slice())
+    } else {
+        None
+    };
+
+    let fetch_started_at = Instant::now();
     let rows = adapter
         .fetch_records(
             &config,
@@ -95,8 +185,11 @@ async fn handle(state: &AppState, body: &[u8]) -> Result<Value, ConnectorError> 
             config.table_name.as_deref(),
             config.selected_fields.as_deref(),
             custom_sql,
+            order_fields,
         )
         .await?;
+    metrics::histogram!("databridge_records_stage_seconds", "stage" => "fetch")
+        .record(fetch_started_at.elapsed().as_secs_f64());
 
     let mut has_more = rows.len() as i64 > effective;
     let take = (effective as usize).min(rows.len());
@@ -105,45 +198,15 @@ async fn handle(state: &AppState, body: &[u8]) -> Result<Value, ConnectorError> 
     // 列类型与 fieldID
     let mut col_types: HashMap<String, i32> = HashMap::new();
     let mut col_field_ids: HashMap<String, String> = HashMap::new();
-    if !result_rows.is_empty() {
-        let cols_meta = if let Some(sql) = custom_sql {
-            adapter.get_sql_columns(&config, sql).await
-        } else {
-            adapter
-                .list_columns(
-                    &config,
-                    &config.schema_name,
-                    config.table_name.as_deref().unwrap_or(""),
-                )
-                .await
-        };
-        match cols_meta {
-            Ok(cols) => {
-                for c in cols {
-                    col_types.insert(c.name.clone(), adapter.map_field_type(&c.data_type));
-                    col_field_ids.insert(c.name.clone(), make_field_id(&c.name));
-                }
-            }
-            Err(_) => {
-                for (name, _) in &result_rows[0].cells {
-                    col_types.insert(name.clone(), 1);
-                    col_field_ids.insert(name.clone(), make_field_id(name));
-                }
-            }
-        }
+    for c in &metadata.columns {
+        col_types.insert(c.name.clone(), adapter.map_field_type(&c.data_type));
+        col_field_ids.insert(c.name.clone(), make_field_id(&c.name));
     }
 
     // 主键列
-    let mut pk_columns: Vec<String> = Vec::new();
-    if config.mode == "table" {
-        if let Some(t) = &config.table_name {
-            pk_columns = adapter
-                .get_primary_key_columns(&config, &config.schema_name, t)
-                .await
-                .unwrap_or_default();
-        }
-    }
+    let pk_columns = metadata.pk_columns;
 
+    let format_started_at = Instant::now();
     let mut record_list: Vec<RecordData> = Vec::with_capacity(result_rows.len());
     for (idx, row) in result_rows.iter().enumerate() {
         // 仅当所有主键列都在返回行中时才用主键生成 primaryID；否则（如 selected_fields
@@ -168,11 +231,12 @@ async fn handle(state: &AppState, body: &[u8]) -> Result<Value, ConnectorError> 
             let field_type = col_types.get(col_name).copied().unwrap_or(1);
             data.insert(field_id, adapter.format_cell(cell.as_deref(), field_type));
         }
-        record_list.push(RecordData {
-            primary_id,
-            data,
-        });
+        record_list.push(RecordData { primary_id, data });
     }
+    metrics::histogram!("databridge_records_stage_seconds", "stage" => "format")
+        .record(format_started_at.elapsed().as_secs_f64());
+    metrics::histogram!("databridge_records_rows", "endpoint" => "records")
+        .record(record_list.len() as f64);
 
     let mut next_token = String::new();
     if has_more {
