@@ -12,7 +12,7 @@
     Consolas, monospace;
 
   /* 亮色（Vercel 风：纯中性灰白，纯黑主按钮，无任何暖色调） */
-  --db-bg: #fafafa;
+  --db-bg: #ffffff;
   --db-card: #ffffff;
   --db-card-2: #fafafa;
   --db-border: rgba(0, 0, 0, 0.08);
@@ -77,12 +77,14 @@ body {
 
 #root {
   min-height: 100vh;
+  background: var(--db-bg);
 }
 
 .db-app {
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
   padding: 18px 22px 26px;
 }
 
@@ -140,11 +142,17 @@ body {
 
 /* ---------- 卡片 ---------- */
 .db-card {
+  width: 100%;
+  min-width: 0;
   background: var(--db-card);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius-lg);
   box-shadow: var(--db-shadow);
   padding: 26px 26px 22px;
+}
+
+.db-card__inner {
+  min-width: 0;
 }
 
 @media (max-width: 480px) {
@@ -194,6 +202,7 @@ body {
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 0;
   min-height: var(--db-field-h);
   padding: 0 14px;
   background: var(--db-card);
@@ -289,6 +298,7 @@ body {
   align-items: center;
   gap: 9px;
   width: 100%;
+  min-width: 0;
   min-height: 42px;
   padding: 0 14px;
   background: var(--db-card-2);
@@ -473,6 +483,18 @@ body {
   }
 }
 
+@media (max-width: 430px) {
+  .db-app {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .db-card {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
 .db-sublabel {
   display: block;
   font-size: 11px;
@@ -544,6 +566,16 @@ body {
 .db-btn svg {
   width: 15px;
   height: 15px;
+}
+
+@media (max-width: 430px) {
+  .db-actions {
+    justify-content: stretch;
+  }
+
+  .db-actions .db-btn {
+    width: 100%;
+  }
 }
 
 .db-spinner {

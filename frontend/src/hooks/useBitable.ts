@@ -13,17 +13,6 @@ export function useBitable() {
       .then((mod) => {
         sdkRef.current = mod.bitable;
         setReady(true);
-
-        mod.bitable.bridge
-          .getTheme()
-          .then((theme) => {
-            applyTheme(theme === "DARK");
-          })
-          .catch(() => {});
-
-        mod.bitable.bridge.onThemeChange((ev) => {
-          applyTheme(ev.data.theme === "DARK");
-        });
       })
       .catch(() => {
         setReady(true);
@@ -83,12 +72,4 @@ export function useBitable() {
   );
 
   return { ready, getExistingConfig, saveConfig, resizeContainer };
-}
-
-function applyTheme(isDark: boolean): void {
-  if (isDark) {
-    document.body.setAttribute("theme-mode", "dark");
-  } else {
-    document.body.removeAttribute("theme-mode");
-  }
 }

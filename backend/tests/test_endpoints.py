@@ -21,6 +21,8 @@ class TestMetaEndpoint:
         assert data["type"] == "data_connector"
         assert "extraData" in data
         assert "dataSourceConfigUiUri" in data["extraData"]
+        assert data["extraData"]["initWidth"] == 520
+        assert data["extraData"]["initHeight"] == 520
         assert "protocol" in data
 
     async def test_meta_has_protocol_uris(

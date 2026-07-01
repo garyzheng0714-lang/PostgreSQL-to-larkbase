@@ -56,7 +56,7 @@ uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 | `PG_CONNECT_TIMEOUT` | PostgreSQL 连接超时时间 |
 | `PG_QUERY_TIMEOUT` | PostgreSQL 查询超时时间 |
 | `MAX_ROW_LIMIT` | 单次同步最大行数 |
-| `HELPER_API_KEY` | 前端辅助接口可选 API key |
+| `HELPER_API_KEY` | 前端辅助接口 API key；Rust 生产后端会强制校验，前端构建需注入同值 `VITE_HELPER_API_KEY` |
 | `POOL_MAX_SIZE` | 单个连接池最大连接数 |
 | `POOL_IDLE_TIMEOUT` | 空闲连接池清理时间 |
 | `POOL_MAX_POOLS` | 最大连接池数量 |

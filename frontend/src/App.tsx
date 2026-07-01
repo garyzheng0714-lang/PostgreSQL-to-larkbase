@@ -6,10 +6,11 @@ import { TableStep } from "./components/TableStep";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { useBitable } from "./hooks/useBitable";
 import { useConfig } from "./hooks/useConfig";
+import { getHelperErrorMessage } from "./api/errors";
 import { listTables, testConnection } from "./api/helper";
+import { clampFrameHeight, getAdaptiveFrameWidth } from "./lib/frameSize";
 import type { ConnectionInfo, TableInfo } from "./types";
 
-const FRAME_WIDTH = 620;
 type Phase = "connect" | "table";
 
 export default function App() {
@@ -49,25 +50,37 @@ export default function App() {
 
   /* 动态高度：内容变化 → 通知飞书调整 iframe（覆盖展开/加载等所有变化）。
      仅在高度真正变化时调用，避免 ResizeObserver 抖动与冗余 SDK 调用。 */
-  const lastHRef = useRef(0);
+  const lastSizeRef = useRef({ width: 0, height: 0 });
   useLayoutEffect(() => {
     // 必须等 SDK 就绪再建立同步：否则首次 resize 是空操作却记下了高度，
     // 等 SDK 就绪后高度没变被去抖跳过 → iframe 卡在初始高不自适应。
     if (!bitable.ready) return;
     const el = appRef.current;
     if (!el) return;
-    lastHRef.current = 0; // 就绪后强制首次同步一次
+    lastSizeRef.current = { width: 0, height: 0 }; // 就绪后强制首次同步一次
     const sync = () => {
       const raw = Math.ceil(el.getBoundingClientRect().height) + 8;
-      const h = Math.max(226, Math.min(606, raw));
-      if (h === lastHRef.current) return;
-      lastHRef.current = h;
-      bitable.resizeContainer(FRAME_WIDTH, h);
+      const width = getAdaptiveFrameWidth();
+      const height = clampFrameHeight(raw);
+      if (
+        width === lastSizeRef.current.width &&
+        height === lastSizeRef.current.height
+      ) {
+        return;
+      }
+      lastSizeRef.current = { width, height };
+      bitable.resizeContainer(width, height);
     };
     sync();
+    requestAnimationFrame(sync);
     const ro = new ResizeObserver(sync);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener("resize", sync);
+    document.fonts?.ready.then(sync).catch(() => {});
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", sync);
+    };
   }, [bitable.ready, bitable.resizeContainer]);
 
   /* 动画守卫：标签页隐藏时 gsap 的 rAF 会冻结，可能把元素卡在中途透明度。
@@ -160,13 +173,17 @@ export default function App() {
           schema_name: config.schemaName,
         });
         setTables(list);
-      } catch {
-        setTablesError("加载数据表失败，请重试");
+      } catch (error) {
+        setTablesError(
+          getHelperErrorMessage(error, "加载数据表失败，请重试")
+        );
       } finally {
         setLoadingTables(false);
       }
-    } catch {
-      setConnectError("网络错误，无法连接后端服务");
+    } catch (error) {
+      setConnectError(
+        getHelperErrorMessage(error, "网络错误，无法连接后端服务")
+      );
     } finally {
       setConnecting(false);
     }

@@ -13,6 +13,8 @@ use crate::server::AppState;
 
 /// 插件版本号（更新后需在飞书连接器中心「更新版本」）。
 pub const APP_VERSION: &str = "1.3.0";
+const INIT_WIDTH: u16 = 520;
+const INIT_HEIGHT: u16 = 520;
 
 pub async fn get_meta(State(state): State<AppState>) -> Json<Value> {
     let cfg = &state.cfg;
@@ -28,8 +30,8 @@ pub async fn get_meta(State(state): State<AppState>) -> Json<Value> {
         "extraData": {
             "disabledPeriodicSync": false,
             "dataSourceConfigUiUri": format!("{}?v={}", cfg.frontend_url, cache_bust),
-            "initHeight": 340,
-            "initWidth": 620,
+            "initHeight": INIT_HEIGHT,
+            "initWidth": INIT_WIDTH,
         },
         "protocol": {
             "type": "http",

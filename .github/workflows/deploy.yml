@@ -24,7 +24,14 @@ jobs:
 
       - name: Install & build frontend
         working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ""
+          VITE_HELPER_API_KEY: ${{ secrets.HELPER_API_KEY }}
         run: |
+          if [ -z "$VITE_HELPER_API_KEY" ]; then
+            echo "HELPER_API_KEY GitHub secret is required for helper API auth"
+            exit 1
+          fi
           npm ci
           npm run build
 

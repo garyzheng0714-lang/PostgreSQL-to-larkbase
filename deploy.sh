@@ -23,6 +23,19 @@ fi
 echo "=== Step 2: Build frontend ==="
 cd "$PROJECT_DIR/frontend"
 export VITE_API_BASE_URL=""
+if [ -z "${VITE_HELPER_API_KEY:-}" ] && [ -f "$PROJECT_DIR/backend/.env.production" ]; then
+    VITE_HELPER_API_KEY="$(awk -F= '/^HELPER_API_KEY=/{print substr($0, index($0, "=") + 1); exit}' "$PROJECT_DIR/backend/.env.production")"
+    VITE_HELPER_API_KEY="${VITE_HELPER_API_KEY%$'\r'}"
+    VITE_HELPER_API_KEY="${VITE_HELPER_API_KEY%\"}"
+    VITE_HELPER_API_KEY="${VITE_HELPER_API_KEY#\"}"
+    VITE_HELPER_API_KEY="${VITE_HELPER_API_KEY%\'}"
+    VITE_HELPER_API_KEY="${VITE_HELPER_API_KEY#\'}"
+    export VITE_HELPER_API_KEY
+fi
+if [ -z "${VITE_HELPER_API_KEY:-}" ]; then
+    echo "ERROR: VITE_HELPER_API_KEY is required and must match backend HELPER_API_KEY"
+    exit 1
+fi
 npm ci
 npm run build
 
