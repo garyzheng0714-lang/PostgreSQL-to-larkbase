@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Select } from "@douyinfe/semi-ui";
 import { Pencil, Table2, Database } from "lucide-react";
 import { ErrorBanner } from "./ErrorBanner";
+import { Button } from "./ui/Button";
 import { getSource } from "../lib/sourceTypes";
 import type { ConnectionInfo, TableInfo } from "../types";
 
@@ -54,15 +55,23 @@ export function TableStep({
       {/* 连接态横幅 */}
       <div className="db-conn">
         <span className="db-conn__dot" aria-hidden />
-        <span className="db-conn__text">
-          {source.name}
-          {connection.database ? ` · ${connection.database}` : ""}
-        </span>
-        {serverMeta && <span className="db-conn__meta">{serverMeta}</span>}
-        <button type="button" className="db-conn__edit" onClick={onEditConnection}>
+        <div className="db-conn__body">
+          <div className="db-conn__main">
+            <span className="db-conn__text" title={source.name}>
+              {source.name}
+            </span>
+            {connection.database && (
+              <span className="db-conn__database" title={connection.database}>
+                {connection.database}
+              </span>
+            )}
+          </div>
+          {serverMeta && <span className="db-conn__meta">{serverMeta}</span>}
+        </div>
+        <Button className="db-conn__edit" onClick={onEditConnection}>
           <Pencil />
           编辑
-        </button>
+        </Button>
       </div>
 
       <ErrorBanner message={tablesError} />
@@ -121,15 +130,14 @@ export function TableStep({
       )}
 
       <div className="db-actions">
-        <button
-          type="button"
+        <Button
           className="db-btn db-btn--primary"
           disabled={!selectedTable || syncing || loadingTables}
           onClick={onSync}
         >
           {syncing && <span className="db-spinner" />}
           {syncing ? "同步中" : "同步"}
-        </button>
+        </Button>
       </div>
     </div>
   );

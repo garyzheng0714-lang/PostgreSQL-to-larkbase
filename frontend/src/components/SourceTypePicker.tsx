@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { SOURCE_TYPES, getSource } from "../lib/sourceTypes";
+import { Button } from "./ui/Button";
 
 interface SourceTypePickerProps {
   value: string;
@@ -86,8 +87,7 @@ export function SourceTypePicker({ value, onChange }: SourceTypePickerProps) {
 
   return (
     <div className="db-src" ref={rootRef} style={{ position: "relative" }}>
-      <button
-        type="button"
+      <Button
         className={`db-box db-box--button${open ? " db-box--focus" : ""}`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -102,13 +102,12 @@ export function SourceTypePicker({ value, onChange }: SourceTypePickerProps) {
           className="db-src__chevron"
           style={{ transform: open ? "rotate(180deg)" : undefined }}
         />
-      </button>
+      </Button>
 
       {open && (
         <div className="db-srcmenu" role="listbox">
           {SOURCE_TYPES.map((s, i) => (
-            <button
-              type="button"
+            <Button
               key={s.id}
               role="option"
               aria-selected={s.id === value}
@@ -124,7 +123,7 @@ export function SourceTypePicker({ value, onChange }: SourceTypePickerProps) {
               </span>
               <span className="db-src__name">{s.name}</span>
               {!s.active && <span className="db-srcmenu__soon">即将支持</span>}
-            </button>
+            </Button>
           ))}
         </div>
       )}

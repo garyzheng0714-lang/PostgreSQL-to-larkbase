@@ -4,6 +4,7 @@ import { SourceTypePicker } from "./SourceTypePicker";
 import { AiHelper } from "./AiHelper";
 import { ManualFields } from "./ManualFields";
 import { ErrorBanner } from "./ErrorBanner";
+import { Button } from "./ui/Button";
 import { buildUri, parseUri } from "../lib/connectionUri";
 import type { ConnectionInfo } from "../types";
 
@@ -101,8 +102,7 @@ export function ConnectStep({
 
         <AiHelper />
 
-        <button
-          type="button"
+        <Button
           className="db-manual__toggle"
           aria-expanded={manualOpen}
           disabled={connecting}
@@ -110,7 +110,7 @@ export function ConnectStep({
         >
           手动填写连接信息
           <ChevronDown />
-        </button>
+        </Button>
         <div className={`db-manual${manualOpen ? " is-open" : ""}`}>
           <div className="db-manual__rows">
             <ManualFields
@@ -122,15 +122,14 @@ export function ConnectStep({
       </div>
 
       <div className="db-actions">
-        <button
-          type="button"
+        <Button
           className="db-btn db-btn--primary"
           disabled={!canConnect}
           onClick={handleConnect}
         >
           {connecting && <span className="db-spinner" />}
           {connecting ? "连接中" : "连接"}
-        </button>
+        </Button>
       </div>
     </div>
   );
