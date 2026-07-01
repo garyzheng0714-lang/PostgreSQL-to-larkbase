@@ -82,7 +82,11 @@ fn security_hash(c: &DatasourceConfig) -> String {
 
 pub fn metadata_cache_key(c: &DatasourceConfig) -> MetadataCacheKey {
     let sec = security_hash(c);
-    let custom_sql = c.custom_sql.as_deref().unwrap_or("");
+    let object_key = if c.mode == "sql" {
+        c.custom_sql.as_deref().unwrap_or("")
+    } else {
+        c.table_name.as_deref().unwrap_or("")
+    };
     MetadataCacheKey(format!(
         "{}:{}:{}:{}:{}:{}:{}:{}:{}",
         c.host,
@@ -93,7 +97,7 @@ pub fn metadata_cache_key(c: &DatasourceConfig) -> MetadataCacheKey {
         &sec[..12],
         c.mode,
         c.schema_name,
-        c.table_name.as_deref().unwrap_or(custom_sql)
+        object_key
     ))
 }
 
@@ -124,5 +128,18 @@ mod tests {
             metadata_cache_key(&cfg("one")),
             metadata_cache_key(&cfg("two"))
         );
+    }
+
+    #[test]
+    fn sql_key_uses_custom_sql_even_when_table_name_is_present() {
+        let mut one = cfg("p");
+        one.mode = "sql".into();
+        one.table_name = Some("stale_table".into());
+        one.custom_sql = Some("select id from articles".into());
+
+        let mut two = one.clone();
+        two.custom_sql = Some("select title from articles".into());
+
+        assert_ne!(metadata_cache_key(&one), metadata_cache_key(&two));
     }
 }

@@ -36,7 +36,10 @@ fn env_or(key: &str, default: &str) -> String {
 }
 
 fn env_parse<T: std::str::FromStr>(key: &str, default: T) -> T {
-    env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    env::var(key)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
 }
 
 impl Config {

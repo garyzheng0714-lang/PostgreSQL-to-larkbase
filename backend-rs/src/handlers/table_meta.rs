@@ -5,14 +5,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use axum::extract::State;
-use axum::http::{StatusCode, header};
+use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use serde_json::Value;
 
 use crate::adapter::DataSourceAdapter;
-use crate::metadata_cache::{CachedMetadata, metadata_cache_key};
+use crate::metadata_cache::{metadata_cache_key, CachedMetadata};
+use crate::protocol::response::{ok_body, FieldMeta, FieldProperty, TableMetaData};
 use crate::protocol::ConnectorError;
-use crate::protocol::response::{FieldMeta, FieldProperty, TableMetaData, ok_body};
 use crate::server::AppState;
 use crate::signature::VerifiedBody;
 use crate::util::id_gen::make_field_id;

@@ -12,19 +12,28 @@ use std::time::Duration;
 use async_trait::async_trait;
 use serde_json::Value;
 use tokio::net::lookup_host;
-use tokio_postgres::SimpleQueryMessage;
 use tokio_postgres::error::SqlState;
+use tokio_postgres::SimpleQueryMessage;
 
 use super::{ColumnInfo, ConnectionResult, DataSourceAdapter, FetchedRow, TableInfo};
 use crate::config::Config;
-use crate::protocol::ConnectorError;
 use crate::protocol::request::DatasourceConfig;
+use crate::protocol::ConnectorError;
 use pool::PoolManager;
 
 /// 双引号包裹标识符并转义内部 `"`（防注入，纵深防御一层）。
 fn quote_ident(s: &str) -> String {
     format!("\"{}\"", s.replace('"', "\"\""))
 }
+
+fn quote_literal(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
+const PRIMARY_KEY_COLUMNS_SQL: &str = "SELECT a.attname::text FROM pg_index i \
+     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) \
+     WHERE i.indrelid = $1::regclass AND i.indisprimary \
+     ORDER BY array_position(i.indkey, a.attnum)";
 
 fn order_clause(order_fields: Option<&[String]>) -> String {
     let Some(fields) = order_fields else {
@@ -41,23 +50,57 @@ fn order_clause(order_fields: Option<&[String]>) -> String {
     format!(" ORDER BY {cols}")
 }
 
-fn build_fetch_query(
+fn keyset_where_clause(
+    order_fields: Option<&[String]>,
+    keyset_after: Option<&[String]>,
+) -> Result<String, ConnectorError> {
+    let (Some(fields), Some(values)) = (order_fields, keyset_after) else {
+        return Ok(String::new());
+    };
+    if fields.is_empty() || fields.len() != values.len() {
+        return Err(ConnectorError::InvalidPageToken);
+    }
+    if fields.len() == 1 {
+        return Ok(format!(
+            " WHERE {} > {}",
+            quote_ident(&fields[0]),
+            quote_literal(&values[0])
+        ));
+    }
+    let cols = fields
+        .iter()
+        .map(|c| quote_ident(c))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let vals = values
+        .iter()
+        .map(|v| quote_literal(v))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Ok(format!(" WHERE ({cols}) > ({vals})"))
+}
+
+struct FetchQuery<'a> {
     offset: i64,
     limit: i64,
-    schema: &str,
-    table: Option<&str>,
-    selected_fields: Option<&[String]>,
-    custom_sql: Option<&str>,
-    order_fields: Option<&[String]>,
-) -> Result<String, ConnectorError> {
-    if let Some(sql) = custom_sql {
-        let sql = sql.trim_end_matches(';');
+    schema: &'a str,
+    table: Option<&'a str>,
+    selected_fields: Option<&'a [String]>,
+    custom_sql: Option<&'a str>,
+    order_fields: Option<&'a [String]>,
+    keyset_after: Option<&'a [String]>,
+}
+
+fn build_fetch_query(args: FetchQuery<'_>) -> Result<String, ConnectorError> {
+    if let Some(sql) = args.custom_sql {
+        let sql = sql.trim().trim_end_matches(';').trim_end();
         return Ok(format!(
-            "SELECT * FROM ({sql}) AS _sub OFFSET {offset} LIMIT {limit}"
+            "{sql}\nOFFSET {} LIMIT {}",
+            args.offset, args.limit
         ));
     }
 
-    let cols = match selected_fields {
+    let cols = match args.selected_fields {
         Some(f) if !f.is_empty() => f
             .iter()
             .map(|c| quote_ident(c))
@@ -65,12 +108,15 @@ fn build_fetch_query(
             .join(", "),
         _ => "*".to_string(),
     };
-    let table = table.ok_or(ConnectorError::TableNotFound)?;
-    let order = order_clause(order_fields);
+    let table = args.table.ok_or(ConnectorError::TableNotFound)?;
+    let keyset_where = keyset_where_clause(args.order_fields, args.keyset_after)?;
+    let order = order_clause(args.order_fields);
     Ok(format!(
-        "SELECT {cols} FROM {}.{}{order} OFFSET {offset} LIMIT {limit}",
-        quote_ident(schema),
-        quote_ident(table)
+        "SELECT {cols} FROM {}.{}{keyset_where}{order} OFFSET {} LIMIT {}",
+        quote_ident(args.schema),
+        quote_ident(table),
+        args.offset,
+        args.limit
     ))
 }
 
@@ -99,6 +145,18 @@ async fn host_resolves_to_private_or_local(host: &str, port: u16) -> bool {
     match tokio::time::timeout(Duration::from_secs(2), lookup_host((host, port))).await {
         Ok(Ok(mut addrs)) => addrs.any(|addr| is_private_or_local_addr(&addr.ip())),
         _ => false,
+    }
+}
+
+fn connection_failure_message(detail: &str, private_or_local: bool) -> &'static str {
+    if detail.contains("password") || detail.contains("authentication") {
+        "用户名或密码错误 / Invalid username or password"
+    } else if detail.contains("does not exist") || detail.contains("catalog") {
+        "数据库不存在 / Database does not exist"
+    } else if private_or_local {
+        "当前部署环境无法访问该内网/本地数据库地址，请改用公网地址或打通网络 / This deployment cannot reach the private/local database address; use a public endpoint or network bridge"
+    } else {
+        "无法连接到服务器，请检查地址和端口 / Cannot connect, check host and port"
     }
 }
 
@@ -150,15 +208,7 @@ impl DataSourceAdapter for PostgresAdapter {
             Err(e) => {
                 let detail = e.to_string().to_lowercase();
                 let private_or_local = host_resolves_to_private_or_local(&cfg.host, cfg.port).await;
-                let message = if private_or_local {
-                    "当前部署环境无法访问该内网/本地数据库地址，请改用公网地址或打通网络 / This deployment cannot reach the private/local database address; use a public endpoint or network bridge"
-                } else if detail.contains("password") || detail.contains("authentication") {
-                    "用户名或密码错误 / Invalid username or password"
-                } else if detail.contains("does not exist") || detail.contains("catalog") {
-                    "数据库不存在 / Database does not exist"
-                } else {
-                    "无法连接到服务器，请检查地址和端口 / Cannot connect, check host and port"
-                };
+                let message = connection_failure_message(&detail, private_or_local);
                 return ConnectionResult {
                     success: false,
                     message: message.into(),
@@ -333,10 +383,11 @@ impl DataSourceAdapter for PostgresAdapter {
         selected_fields: Option<&[String]>,
         custom_sql: Option<&str>,
         order_fields: Option<&[String]>,
+        keyset_after: Option<&[String]>,
     ) -> Result<Vec<FetchedRow>, ConnectorError> {
         let client = self.pools.acquire(cfg).await?;
         // offset/limit 为本服务校验过的 i64，内联安全（非用户文本）。
-        let query = build_fetch_query(
+        let query = build_fetch_query(FetchQuery {
             offset,
             limit,
             schema,
@@ -344,7 +395,8 @@ impl DataSourceAdapter for PostgresAdapter {
             selected_fields,
             custom_sql,
             order_fields,
-        )?;
+            keyset_after,
+        })?;
         simple_query_rows(&client, &query).await
     }
 
@@ -358,12 +410,7 @@ impl DataSourceAdapter for PostgresAdapter {
         // 用引用后的标识符喂 regclass，支持大写/特殊字符表名（否则解析失败 → 主键丢失）。
         let rel = format!("{}.{}", quote_ident(schema), quote_ident(table));
         let rows = client
-            .query(
-                "SELECT a.attname::text FROM pg_index i \
-                 JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) \
-                 WHERE i.indrelid = $1::regclass AND i.indisprimary",
-                &[&rel],
-            )
+            .query(PRIMARY_KEY_COLUMNS_SQL, &[&rel])
             .await
             .map_err(map_pg_err)?;
         Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
@@ -427,15 +474,16 @@ mod tests {
 
     #[test]
     fn table_fetch_query_orders_by_primary_key_when_available() {
-        let query = build_fetch_query(
-            0,
-            1001,
-            "public",
-            Some("articles"),
-            None,
-            None,
-            Some(&["id".to_string()]),
-        )
+        let query = build_fetch_query(FetchQuery {
+            offset: 0,
+            limit: 1001,
+            schema: "public",
+            table: Some("articles"),
+            selected_fields: None,
+            custom_sql: None,
+            order_fields: Some(&["id".to_string()]),
+            keyset_after: None,
+        })
         .unwrap();
 
         assert_eq!(
@@ -446,15 +494,16 @@ mod tests {
 
     #[test]
     fn table_fetch_query_quotes_selected_columns_and_order_columns() {
-        let query = build_fetch_query(
-            1000,
-            500,
-            "tenant schema",
-            Some("Feed Items"),
-            Some(&["Title".to_string(), "created at".to_string()]),
-            None,
-            Some(&["created at".to_string(), "Title".to_string()]),
-        )
+        let query = build_fetch_query(FetchQuery {
+            offset: 1000,
+            limit: 500,
+            schema: "tenant schema",
+            table: Some("Feed Items"),
+            selected_fields: Some(&["Title".to_string(), "created at".to_string()]),
+            custom_sql: None,
+            order_fields: Some(&["created at".to_string(), "Title".to_string()]),
+            keyset_after: None,
+        })
         .unwrap();
 
         assert_eq!(
@@ -465,21 +514,79 @@ mod tests {
 
     #[test]
     fn custom_sql_fetch_query_keeps_existing_protocol_shape() {
-        let query = build_fetch_query(
-            10,
-            20,
-            "ignored",
-            None,
-            None,
-            Some("select id from articles;"),
-            Some(&["id".to_string()]),
-        )
+        let query = build_fetch_query(FetchQuery {
+            offset: 10,
+            limit: 20,
+            schema: "ignored",
+            table: None,
+            selected_fields: None,
+            custom_sql: Some("select id from articles order by id;"),
+            order_fields: Some(&["id".to_string()]),
+            keyset_after: Some(&["10".to_string()]),
+        })
         .unwrap();
 
         assert_eq!(
             query,
-            "SELECT * FROM (select id from articles) AS _sub OFFSET 10 LIMIT 20"
+            "select id from articles order by id\nOFFSET 10 LIMIT 20"
         );
+    }
+
+    #[test]
+    fn custom_sql_fetch_query_line_comment_cannot_swallow_pagination() {
+        let query = build_fetch_query(FetchQuery {
+            offset: 10,
+            limit: 20,
+            schema: "ignored",
+            table: None,
+            selected_fields: None,
+            custom_sql: Some("select id from articles order by id -- stable pagination"),
+            order_fields: None,
+            keyset_after: None,
+        })
+        .unwrap();
+
+        assert_eq!(
+            query,
+            "select id from articles order by id -- stable pagination\nOFFSET 10 LIMIT 20"
+        );
+    }
+
+    #[test]
+    fn table_fetch_query_uses_keyset_predicate_when_available() {
+        let query = build_fetch_query(FetchQuery {
+            offset: 0,
+            limit: 100,
+            schema: "public",
+            table: Some("events"),
+            selected_fields: None,
+            custom_sql: None,
+            order_fields: Some(&["created at".to_string(), "id".to_string()]),
+            keyset_after: Some(&["2026-07-01 00:00:00".to_string(), "abc'123".to_string()]),
+        })
+        .unwrap();
+
+        assert_eq!(
+            query,
+            r#"SELECT * FROM "public"."events" WHERE ("created at", "id") > ('2026-07-01 00:00:00', 'abc''123') ORDER BY "created at" ASC, "id" ASC OFFSET 0 LIMIT 100"#
+        );
+    }
+
+    #[test]
+    fn table_fetch_query_rejects_keyset_shape_mismatch() {
+        let err = build_fetch_query(FetchQuery {
+            offset: 0,
+            limit: 100,
+            schema: "public",
+            table: Some("events"),
+            selected_fields: None,
+            custom_sql: None,
+            order_fields: Some(&["id".to_string()]),
+            keyset_after: Some(&["1".to_string(), "2".to_string()]),
+        })
+        .unwrap_err();
+
+        assert!(matches!(err, ConnectorError::InvalidPageToken));
     }
 
     #[test]
@@ -491,5 +598,16 @@ mod tests {
         assert!(!is_private_or_local_addr(
             &"47.102.239.123".parse().unwrap()
         ));
+    }
+
+    #[test]
+    fn connection_message_prefers_auth_errors_over_private_address_hint() {
+        let msg = connection_failure_message("password authentication failed", true);
+        assert!(msg.contains("Invalid username or password"));
+    }
+
+    #[test]
+    fn primary_key_columns_query_preserves_index_order() {
+        assert!(PRIMARY_KEY_COLUMNS_SQL.contains("ORDER BY array_position(i.indkey, a.attnum)"));
     }
 }

@@ -14,8 +14,8 @@ pub mod registry;
 use async_trait::async_trait;
 use serde_json::Value;
 
-use crate::protocol::ConnectorError;
 use crate::protocol::request::DatasourceConfig;
+use crate::protocol::ConnectorError;
 
 use postgres::type_map;
 
@@ -97,6 +97,7 @@ pub trait DataSourceAdapter: Send + Sync {
         selected_fields: Option<&[String]>,
         custom_sql: Option<&str>,
         order_fields: Option<&[String]>,
+        keyset_after: Option<&[String]>,
     ) -> Result<Vec<FetchedRow>, ConnectorError>;
     async fn get_primary_key_columns(
         &self,
@@ -111,7 +112,7 @@ pub trait DataSourceAdapter: Send + Sync {
         limit: i64,
     ) -> Result<Vec<FetchedRow>, ConnectorError>;
     async fn validate_sql(&self, cfg: &DatasourceConfig, sql: &str)
-    -> Result<bool, ConnectorError>;
+        -> Result<bool, ConnectorError>;
 
     /// PG 文本值 → Bitable 协议值（按字段类型）。
     fn format_cell(&self, text: Option<&str>, field_type: i32) -> Value;

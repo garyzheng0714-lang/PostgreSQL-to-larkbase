@@ -93,7 +93,10 @@ pub struct HelperAuth;
 impl FromRequestParts<AppState> for HelperAuth {
     type Rejection = Response;
 
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         if state.cfg.is_dev_mode() {
             return Ok(HelperAuth);
         }
@@ -104,7 +107,11 @@ impl FromRequestParts<AppState> for HelperAuth {
             .unwrap_or("");
         // fail-closed：未配置 key 一律拒绝
         if state.cfg.helper_api_key.is_empty() || provided != state.cfg.helper_api_key {
-            return Err((StatusCode::UNAUTHORIZED, "Invalid or missing helper API key").into_response());
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                "Invalid or missing helper API key",
+            )
+                .into_response());
         }
         Ok(HelperAuth)
     }
@@ -168,7 +175,10 @@ pub async fn list_tables(
     let Some(adapter) = state.registry.get_default() else {
         return fail("no adapter");
     };
-    match adapter.list_tables(&req.conn.to_config(), &req.schema_name).await {
+    match adapter
+        .list_tables(&req.conn.to_config(), &req.schema_name)
+        .await
+    {
         Ok(tables) => {
             let data: Vec<Value> = tables
                 .into_iter()

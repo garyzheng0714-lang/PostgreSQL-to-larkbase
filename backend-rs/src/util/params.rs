@@ -25,7 +25,9 @@ pub fn parse_feishu_params(payload: &Value) -> Result<(DatasourceConfig, Value),
         .unwrap_or_else(|| Value::String("{}".into()));
     let params = safe_json(&raw_params);
     if !params.is_object() {
-        return Err(ConnectorError::ConnectionFailed("params is not an object".into()));
+        return Err(ConnectorError::ConnectionFailed(
+            "params is not an object".into(),
+        ));
     }
 
     let ds_raw = params
@@ -39,7 +41,9 @@ pub fn parse_feishu_params(payload: &Value) -> Result<(DatasourceConfig, Value),
         ds = safe_json(&ds["datasourceConfig"]);
     }
     if !ds.is_object() {
-        return Err(ConnectorError::ConnectionFailed("datasourceConfig is not an object".into()));
+        return Err(ConnectorError::ConnectionFailed(
+            "datasourceConfig is not an object".into(),
+        ));
     }
 
     let mut config: DatasourceConfig = serde_json::from_value(ds)
@@ -60,10 +64,7 @@ pub struct RequestContext {
 
 /// 解析 context（best-effort，失败返回全 "?"）。
 pub fn parse_context(payload: &Value) -> RequestContext {
-    let ctx = payload
-        .get("context")
-        .map(safe_json)
-        .unwrap_or(Value::Null);
+    let ctx = payload.get("context").map(safe_json).unwrap_or(Value::Null);
     let s = |v: &Value| v.as_str().unwrap_or("?").to_string();
     RequestContext {
         tenant_key: s(ctx.get("tenantKey").unwrap_or(&Value::Null)),
@@ -108,7 +109,8 @@ mod tests {
 
     #[test]
     fn parses_double_nested() {
-        let payload = json!({ "params": { "datasourceConfig": { "datasourceConfig": min_config() } } });
+        let payload =
+            json!({ "params": { "datasourceConfig": { "datasourceConfig": min_config() } } });
         let (cfg, _) = parse_feishu_params(&payload).unwrap();
         assert_eq!(cfg.username, "u");
     }

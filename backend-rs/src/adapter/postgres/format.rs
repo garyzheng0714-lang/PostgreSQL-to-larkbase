@@ -32,7 +32,9 @@ pub fn pk_text(text: Option<&str>) -> String {
 
 fn json_num(f: f64) -> Value {
     if f.is_finite() {
-        Number::from_f64(f).map(Value::Number).unwrap_or(Value::Null)
+        Number::from_f64(f)
+            .map(Value::Number)
+            .unwrap_or(Value::Null)
     } else {
         Value::Null
     }

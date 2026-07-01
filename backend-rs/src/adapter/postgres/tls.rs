@@ -10,7 +10,9 @@ use std::sync::Arc;
 
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
-use rustls::{ClientConfig, DigitallySignedStruct, Error as RustlsError, RootCertStore, SignatureScheme};
+use rustls::{
+    ClientConfig, DigitallySignedStruct, Error as RustlsError, RootCertStore, SignatureScheme,
+};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::protocol::request::DatasourceConfig;
@@ -61,7 +63,9 @@ impl ServerCertVerifier for NoVerify {
 /// CA / 客户端证书解析失败一律报 ConnectionFailed，不静默吞掉。
 pub fn build_tls(cfg: &DatasourceConfig) -> Result<MakeRustlsConnect, ConnectorError> {
     let provider = rustls::crypto::ring::default_provider();
-    let schemes = provider.signature_verification_algorithms.supported_schemes();
+    let schemes = provider
+        .signature_verification_algorithms
+        .supported_schemes();
     let provider = Arc::new(provider);
 
     let verify = matches!(cfg.ssl_mode.as_str(), "verify-ca" | "verify-full");
@@ -73,11 +77,15 @@ pub fn build_tls(cfg: &DatasourceConfig) -> Result<MakeRustlsConnect, ConnectorE
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|e| ConnectorError::ConnectionFailed(format!("invalid ssl_cert: {e}")))?;
             if certs.is_empty() {
-                return Err(ConnectorError::ConnectionFailed("ssl_cert has no certificate".into()));
+                return Err(ConnectorError::ConnectionFailed(
+                    "ssl_cert has no certificate".into(),
+                ));
             }
             let key = rustls_pemfile::private_key(&mut key_pem.as_bytes())
                 .map_err(|e| ConnectorError::ConnectionFailed(format!("invalid ssl_key: {e}")))?
-                .ok_or_else(|| ConnectorError::ConnectionFailed("ssl_key has no private key".into()))?;
+                .ok_or_else(|| {
+                    ConnectorError::ConnectionFailed("ssl_key has no private key".into())
+                })?;
             Some((certs, key))
         }
         _ => None,
@@ -93,9 +101,13 @@ pub fn build_tls(cfg: &DatasourceConfig) -> Result<MakeRustlsConnect, ConnectorE
         if let Some(ca_pem) = &cfg.ssl_root_cert {
             let cas = rustls_pemfile::certs(&mut ca_pem.as_bytes())
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| ConnectorError::ConnectionFailed(format!("invalid ssl_root_cert: {e}")))?;
+                .map_err(|e| {
+                    ConnectorError::ConnectionFailed(format!("invalid ssl_root_cert: {e}"))
+                })?;
             if cas.is_empty() {
-                return Err(ConnectorError::ConnectionFailed("ssl_root_cert has no certificate".into()));
+                return Err(ConnectorError::ConnectionFailed(
+                    "ssl_root_cert has no certificate".into(),
+                ));
             }
             for c in cas {
                 roots

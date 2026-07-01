@@ -3,11 +3,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::Router;
 use axum::extract::{DefaultBodyLimit, FromRef, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
+use axum::Router;
 use metrics_exporter_prometheus::PrometheusHandle;
 use tower::ServiceBuilder;
 use tower_http::catch_panic::CatchPanicLayer;
