@@ -19,6 +19,10 @@ pub struct Config {
     pub max_row_limit: i64,
     /// 前端辅助接口 API key。为空时 helper 路由 fail-closed（除非 dev 模式）。
     pub helper_api_key: String,
+    /// 兼容开关：开启后，「带 ts+nonce 但无签名」的请求放行（对应飞书连接器
+    /// 未配 secretKey、只发 ts+nonce 无签名的情况，与旧 Python 后端行为一致）。
+    /// 默认 false（严格要求签名）。配好飞书 Verification token 后应关闭以恢复强验签。
+    pub allow_unsigned: bool,
     /// 单配置连接池最大连接数。
     pub pool_max_size: usize,
     /// 连接池空闲回收超时（秒）。
@@ -46,6 +50,10 @@ impl Config {
             pg_query_timeout: env_parse("PG_QUERY_TIMEOUT", 15),
             max_row_limit: env_parse("MAX_ROW_LIMIT", 50_000),
             helper_api_key: env_or("HELPER_API_KEY", ""),
+            allow_unsigned: matches!(
+                env_or("ALLOW_UNSIGNED", "false").to_lowercase().as_str(),
+                "true" | "1" | "yes"
+            ),
             pool_max_size: env_parse("POOL_MAX_SIZE", 5),
             pool_idle_timeout: env_parse("POOL_IDLE_TIMEOUT", 300),
             pool_max_pools: env_parse("POOL_MAX_POOLS", 20),

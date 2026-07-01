@@ -46,6 +46,7 @@ jobs:
           docker run -d --name pg2bitable-backend-rs --restart unless-stopped \
             -p 127.0.0.1:18083:18082 \
             --env-file /opt/pg2bitable/backend/.env.production \
+            -e ALLOW_UNSIGNED=true \
             --network postgres_default \
             fbif-databridge-rs:latest
           echo "Waiting for Rust backend health on 18083..."

@@ -77,6 +77,12 @@ pub fn validate(
         if cfg.is_dev_mode() {
             return Ok(());
         }
+        // 兼容旧 Python 行为（需显式 ALLOW_UNSIGNED=true 开启）：飞书连接器未配
+        // secretKey 时只发 ts+nonce 无签名，此时放行。配好飞书 Verification token
+        // 后应关闭此开关恢复强验签。
+        if cfg.allow_unsigned && !timestamp.is_empty() && !nonce.is_empty() {
+            return Ok(());
+        }
         return Err(ConnectorError::SignatureInvalid);
     }
 
@@ -190,6 +196,17 @@ mod tests {
     fn no_signature_prod_rejected_even_with_ts_nonce() {
         // 修复签名旁路：生产模式下，即便带 ts+nonce，缺签名也必须拒绝。
         assert!(validate(&prod_cfg(), "123", "n", "", b"body").is_err());
+    }
+
+    #[test]
+    fn allow_unsigned_with_ts_nonce_passes() {
+        // 开启 ALLOW_UNSIGNED（兼容旧 Python）：带 ts+nonce 无签名放行。
+        let mut c = prod_cfg();
+        c.allow_unsigned = true;
+        assert!(validate(&c, "123", "n", "", b"body").is_ok());
+        // 但缺 ts 或缺 nonce 仍拒（与 Python 一致）。
+        assert!(validate(&c, "", "n", "", b"body").is_err());
+        assert!(validate(&c, "123", "", "", b"body").is_err());
     }
 
     #[test]
