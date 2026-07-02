@@ -13,7 +13,8 @@ describe("frame sizing", () => {
   });
 
   it("clamps dynamic frame width to the connector protocol range", () => {
-    expect(clampFrameWidth(300)).toBe(420);
+    expect(clampFrameWidth(300)).toBe(410);
+    expect(clampFrameWidth(410)).toBe(410);
     expect(clampFrameWidth(620)).toBe(620);
     expect(clampFrameWidth(1000)).toBe(840);
   });

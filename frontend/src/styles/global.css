@@ -1,62 +1,68 @@
 /* ============================================================
-   FBIF DataBridge · 配置页设计层
-   单色 / Geist / 发丝边框 / 大留白（Codex/Notion 风）
-   亮暗双主题用 CSS 变量统一；Semi UI 仅承载下拉/搜索行为。
+   FBIF DataBridge · 飞书连接器配置页
+   按 Feishu Universe Design：白底、灰阶、轻描边、紧凑表单。
    ============================================================ */
 
 /* ---------- 设计 token ---------- */
 :root {
-  --geist: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --geist: "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
     Consolas, monospace;
 
-  /* 亮色（Vercel 风：纯中性灰白，纯黑主按钮，无任何暖色调） */
+  /* Feishu Universe Design tokens */
   --db-bg: #ffffff;
   --db-card: #ffffff;
-  --db-card-2: #fafafa;
-  --db-border: rgba(0, 0, 0, 0.08);
-  --db-border-strong: rgba(0, 0, 0, 0.18);
-  --db-text: #171717;
-  --db-text-2: #666666;
-  --db-text-3: #999999;
-  --db-accent: #000000; /* 主按钮/强调：纯黑 */
+  --db-card-2: #f8f9fa;
+  --db-border: #dee0e3;
+  --db-border-strong: #d0d3d6;
+  --db-text: #1f2329;
+  --db-text-2: #646a73;
+  --db-text-3: #8f959e;
+  --db-accent: #1f2329;
+  --db-accent-hover: #373c43;
+  --db-accent-active: #000000;
   --db-accent-text: #ffffff;
-  --db-fill: #f2f2f2; /* 芯片/弱填充 */
-  --db-fill-hover: #ebebeb;
-  /* 状态色一律单色化：只用黑白灰，靠图标/文案区分成败，绝不出现红绿等色相 */
-  --db-danger: #171717;
-  --db-danger-bg: rgba(0, 0, 0, 0.045);
-  --db-ok: #171717;
-  --db-ring: rgba(0, 0, 0, 0.6);
+  --db-fill: #f5f6f7;
+  --db-fill-hover: #eff0f1;
+  --db-danger: #1f2329;
+  --db-danger-bg: #f5f6f7;
+  --db-ok: #1f2329;
+  --db-ok-bg: #eff0f1;
+  --db-ring: #1f2329;
 
-  --db-radius: 12px;
-  --db-radius-sm: 9px;
-  --db-radius-lg: 16px;
-  --db-field-h: 44px;
-  --db-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -16px rgba(0, 0, 0, 0.18);
-  --db-shadow-pop: 0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 12px 32px -8px rgba(0, 0, 0, 0.18);
+  --db-radius: 6px;
+  --db-radius-sm: 4px;
+  --db-radius-lg: 8px;
+  --db-field-h: 32px;
+  --db-shadow: none;
+  --db-shadow-pop:
+    0 2px 4px -4px rgba(31, 35, 39, 0.02),
+    0 4px 8px 0 rgba(31, 35, 39, 0.02),
+    0 4px 16px 4px rgba(31, 35, 39, 0.02);
 }
 
 body[theme-mode="dark"] {
-  --db-bg: #0a0a0a;
-  --db-card: #171717;
-  --db-card-2: #141414;
-  --db-border: rgba(255, 255, 255, 0.1);
-  --db-border-strong: rgba(255, 255, 255, 0.2);
-  --db-text: #ededed;
-  --db-text-2: #a1a1a1;
-  --db-text-3: #707070;
-  --db-accent: #ffffff; /* 暗色下主按钮反相：纯白底黑字 */
-  --db-accent-text: #000000;
-  --db-fill: #262626;
-  --db-fill-hover: #333333;
-  --db-danger: #ededed;
-  --db-danger-bg: rgba(255, 255, 255, 0.07);
-  --db-ok: #ededed;
-  --db-ring: rgba(255, 255, 255, 0.7);
-  --db-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -16px rgba(0, 0, 0, 0.6);
-  --db-shadow-pop: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  --db-bg: #ffffff;
+  --db-card: #ffffff;
+  --db-card-2: #f8f9fa;
+  --db-border: #dee0e3;
+  --db-border-strong: #d0d3d6;
+  --db-text: #1f2329;
+  --db-text-2: #646a73;
+  --db-text-3: #8f959e;
+  --db-accent: #1f2329;
+  --db-accent-hover: #373c43;
+  --db-accent-active: #000000;
+  --db-fill: #f5f6f7;
+  --db-fill-hover: #eff0f1;
+  --db-danger-bg: #f5f6f7;
+  --db-ok-bg: #eff0f1;
+  --db-ring: #1f2329;
+  --db-shadow-pop:
+    0 2px 4px -4px rgba(0, 0, 0, 0.35),
+    0 4px 8px 0 rgba(0, 0, 0, 0.32),
+    0 4px 16px 4px rgba(0, 0, 0, 0.24);
 }
 
 /* ---------- 基础 ---------- */
@@ -85,12 +91,12 @@ body {
   max-width: none;
   min-width: 0;
   margin: 0;
-  padding: 18px 22px 26px;
+  padding: 4px 0 0;
 }
 
 @media (max-width: 480px) {
   .db-app {
-    padding: 14px 14px 20px;
+    padding: 0;
   }
 }
 
@@ -99,29 +105,28 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
-  padding: 0 2px;
+  margin-bottom: 12px;
+  padding: 0;
 }
 
 .db-head__title {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--db-text-3);
+  color: var(--db-text-2);
 }
 
 .db-head__reset {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12.5px;
-  color: var(--db-text-3);
+  gap: 6px;
+  font-size: 12px;
+  color: var(--db-text-2);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 6px;
-  margin: -4px -6px;
-  border-radius: 7px;
+  padding: 4px 8px;
+  margin: 0;
+  border-radius: var(--db-radius);
   transition: color 0.15s, background 0.15s;
 }
 
@@ -145,10 +150,10 @@ body {
   width: 100%;
   min-width: 0;
   background: var(--db-card);
-  border: 1px solid var(--db-border);
-  border-radius: var(--db-radius-lg);
-  box-shadow: var(--db-shadow);
-  padding: 26px 26px 22px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
 }
 
 .db-card__inner {
@@ -157,31 +162,33 @@ body {
 
 @media (max-width: 480px) {
   .db-card {
-    padding: 20px 18px 18px;
+    padding: 0;
   }
 }
 
 .db-card__title {
-  font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--db-text);
   margin: 0;
 }
 
 .db-card__subtitle {
-  font-size: 12.5px;
+  font-size: 13px;
+  line-height: 20px;
   color: var(--db-text-2);
   margin: 4px 0 0;
 }
 
 .db-card__head {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 /* ---------- 字段块 ---------- */
 .db-field {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .db-field:last-child {
@@ -193,8 +200,8 @@ body {
   font-size: 12px;
   font-weight: 500;
   color: var(--db-text-2);
-  margin-bottom: 7px;
-  letter-spacing: 0.01em;
+  margin-bottom: 8px;
+  letter-spacing: 0;
 }
 
 /* ---------- 通用受控外框（输入/选择器同款发丝边框盒子） ---------- */
@@ -204,7 +211,7 @@ body {
   width: 100%;
   min-width: 0;
   min-height: var(--db-field-h);
-  padding: 0 14px;
+  padding: 0 12px;
   background: var(--db-card);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius);
@@ -218,7 +225,7 @@ body {
 .db-box--focus,
 .db-box:focus-within {
   border-color: var(--db-ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-ring) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--db-ring) 18%, transparent);
 }
 
 .db-box--button {
@@ -244,10 +251,10 @@ body {
   outline: none;
   background: transparent;
   font-family: var(--geist-mono);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--db-text);
-  padding: 12px 0;
-  letter-spacing: -0.01em;
+  padding: 7px 0;
+  letter-spacing: 0;
 }
 
 .db-input::placeholder {
@@ -261,19 +268,19 @@ body {
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 7px;
-  background: var(--db-fill);
-  color: var(--db-text-2);
+  border-radius: var(--db-radius-sm);
+  background: color-mix(in srgb, var(--db-accent) 10%, white);
+  color: var(--db-accent);
   font-family: var(--geist-mono);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   flex-shrink: 0;
 }
 
 .db-src__name {
   flex: 1;
-  margin-left: 10px;
+  margin-left: 8px;
   font-size: 14px;
   font-weight: 500;
   color: var(--db-text);
@@ -296,11 +303,11 @@ body {
 .db-ai__trigger {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
   min-width: 0;
-  min-height: 42px;
-  padding: 0 14px;
+  min-height: 36px;
+  padding: 0 12px;
   background: var(--db-card-2);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius);
@@ -351,7 +358,7 @@ body {
 }
 
 .db-ai__panel-inner {
-  padding: 14px 14px 16px;
+  padding: 12px;
 }
 
 .db-ai__steps {
@@ -396,8 +403,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 36px;
-  padding: 0 14px;
+  height: 32px;
+  padding: 0 12px;
   background: var(--db-card);
   border: 1px solid var(--db-border-strong);
   border-radius: var(--db-radius-sm);
@@ -460,7 +467,7 @@ body {
 }
 
 .db-manual__grid {
-  padding-top: 14px;
+  padding-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -485,13 +492,13 @@ body {
 
 @media (max-width: 430px) {
   .db-app {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .db-card {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
@@ -506,9 +513,11 @@ body {
 .db-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 22px;
+  justify-content: stretch;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--db-text) 15%, transparent);
 }
 
 .db-actions--split {
@@ -520,12 +529,12 @@ body {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 38px;
-  padding: 0 18px;
-  border-radius: var(--db-radius-sm);
+  height: 32px;
+  padding: 0 16px;
+  border-radius: var(--db-radius);
   font-family: var(--geist);
-  font-size: 13.5px;
-  font-weight: 550;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.08s,
@@ -543,7 +552,11 @@ body {
 }
 
 .db-btn--primary:hover {
-  opacity: 0.88;
+  background: var(--db-accent-hover);
+}
+
+.db-btn--primary:active {
+  background: var(--db-accent-active);
 }
 
 .db-btn--ghost {
@@ -578,6 +591,10 @@ body {
   }
 }
 
+.db-actions .db-btn--primary {
+  width: 100%;
+}
+
 .db-spinner {
   width: 14px;
   height: 14px;
@@ -596,14 +613,15 @@ body {
 
 /* ---------- 连接态横幅 ---------- */
 .db-conn {
-  display: flex;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 11px;
-  padding: 12px 14px;
+  column-gap: 10px;
+  padding: 10px 12px;
   background: var(--db-card-2);
   border: 1px solid var(--db-border);
   border-radius: var(--db-radius);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .db-conn__dot {
@@ -612,13 +630,28 @@ body {
   border-radius: 50%;
   background: var(--db-ok);
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-ok) 18%, transparent);
+  box-shadow: 0 0 0 3px var(--db-ok-bg);
+}
+
+.db-conn__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.db-conn__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .db-conn__text {
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
   font-size: 13px;
+  line-height: 20px;
   color: var(--db-text);
   font-weight: 500;
   overflow: hidden;
@@ -626,11 +659,22 @@ body {
   white-space: nowrap;
 }
 
+.db-conn__database {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--db-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .db-conn__meta {
-  font-size: 11.5px;
+  display: block;
+  font-size: 12px;
+  line-height: 18px;
   color: var(--db-text-3);
-  font-family: var(--geist-mono);
-  flex-shrink: 0;
 }
 
 .db-conn__edit {
@@ -639,9 +683,9 @@ body {
   color: var(--db-text-3);
   cursor: pointer;
   font-size: 12px;
-  padding: 4px 6px;
-  margin: -4px -6px;
-  border-radius: 6px;
+  padding: 5px 8px;
+  margin: 0;
+  border-radius: var(--db-radius);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -666,7 +710,7 @@ body {
   padding: 11px 13px;
   background: var(--db-danger-bg);
   border: 1px solid color-mix(in srgb, var(--db-danger) 30%, transparent);
-  border-radius: var(--db-radius-sm);
+  border-radius: var(--db-radius);
   margin-bottom: 16px;
   font-size: 12.5px;
   line-height: 1.5;
@@ -707,7 +751,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 28px 16px;
+  padding: 24px 12px;
   text-align: center;
   color: var(--db-text-3);
 }
@@ -724,21 +768,21 @@ body {
 
 /* ---------- 表计数 ---------- */
 .db-tablecount {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--db-text-3);
-  margin-top: 7px;
+  margin-top: 8px;
 }
 
 /* ============================================================
-   Semi UI token 覆盖 —— 让 Select 下拉融入单色设计
+   Semi UI token 覆盖 —— 让 Select 下拉融入飞书设计
    ============================================================ */
 .db-app,
 .semi-portal {
   --semi-color-primary: var(--db-accent);
-  --semi-color-primary-hover: var(--db-accent);
-  --semi-color-primary-active: var(--db-accent);
-  --semi-border-radius-small: 8px;
-  --semi-border-radius-medium: 12px;
+  --semi-color-primary-hover: var(--db-accent-hover);
+  --semi-color-primary-active: var(--db-accent-active);
+  --semi-border-radius-small: 4px;
+  --semi-border-radius-medium: 6px;
 }
 
 /* Semi Select 触发器贴合 .db-box 视觉 */
@@ -761,7 +805,7 @@ body {
 .db-select.semi-select.semi-select-focus,
 .db-select.semi-select-open {
   border-color: var(--db-ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-ring) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--db-ring) 18%, transparent);
 }
 
 .db-select .semi-select-selection {
@@ -780,21 +824,22 @@ body {
 .db-dropdown.semi-select-option-list,
 .semi-select-popover .semi-select-option-list {
   border-radius: 12px;
-  padding: 6px;
+  padding: 4px;
   box-shadow: var(--db-shadow-pop);
   border: 1px solid var(--db-border);
   background: var(--db-card);
 }
 
 .semi-select-option {
-  border-radius: 8px;
+  border-radius: var(--db-radius);
   font-size: 13.5px;
   color: var(--db-text);
   padding: 8px 10px;
 }
 
 .semi-select-option-selected {
-  background: var(--db-fill);
+  background: color-mix(in srgb, var(--db-accent) 8%, transparent);
+  color: var(--db-accent);
   font-weight: 600;
 }
 
@@ -808,7 +853,7 @@ body {
   cursor: default;
 }
 
-/* 下拉内搜索框聚焦改单色（去掉 Semi 默认蓝环） */
+/* 下拉内搜索框聚焦使用灰阶描边 */
 .semi-select-popover .semi-input-wrapper:focus-within,
 .semi-select-popover .semi-input-wrapper-focus,
 .db-dropdown .semi-input-wrapper:focus-within,
@@ -818,7 +863,7 @@ body {
 }
 
 .semi-select-popover .semi-input-wrapper {
-  border-radius: 9px;
+  border-radius: var(--db-radius);
   background: var(--db-fill);
   border-color: transparent;
 }
@@ -853,7 +898,7 @@ body {
   padding: 6px;
   background: var(--db-card);
   border: 1px solid var(--db-border);
-  border-radius: 12px;
+  border-radius: var(--db-radius);
   box-shadow: var(--db-shadow-pop);
   animation: db-pop 0.16s ease;
 }
@@ -873,7 +918,7 @@ body {
   padding: 8px 10px;
   border: none;
   background: none;
-  border-radius: 8px;
+  border-radius: var(--db-radius);
   cursor: pointer;
   text-align: left;
   transition: background 0.12s;
@@ -958,17 +1003,17 @@ body {
 /* ---------- SSL 分段控件 ---------- */
 .db-seg {
   display: inline-flex;
-  padding: 3px;
+  padding: 2px;
   gap: 2px;
   background: var(--db-fill);
-  border-radius: var(--db-radius-sm);
+  border-radius: var(--db-radius);
 }
 
 .db-seg__item {
   border: none;
   background: none;
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  border-radius: var(--db-radius-sm);
   font-size: 12.5px;
   color: var(--db-text-2);
   cursor: pointer;
@@ -978,7 +1023,7 @@ body {
 .db-seg__item.is-active {
   background: var(--db-card);
   color: var(--db-text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(31, 35, 39, 0.08);
   font-weight: 500;
 }
 
@@ -986,9 +1031,9 @@ body {
 .db-topt {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--db-radius);
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -998,7 +1043,7 @@ body {
 }
 
 .db-topt.is-sel {
-  background: var(--db-fill);
+  background: color-mix(in srgb, var(--db-accent) 8%, transparent);
 }
 
 .db-topt__icon {

@@ -19,6 +19,11 @@ use crate::config::Config;
 use crate::protocol::request::DatasourceConfig;
 use crate::protocol::ConnectorError;
 
+const MIN_CONNECT_TIMEOUT: u64 = 1;
+const MAX_CONNECT_TIMEOUT: u64 = 30;
+const MIN_QUERY_TIMEOUT: u64 = 1;
+const MAX_QUERY_TIMEOUT: u64 = 20;
+
 struct Entry {
     pool: Pool,
     last_used: Instant,
@@ -30,6 +35,8 @@ pub struct PoolManager {
     max_pools: usize,
     idle_timeout: Duration,
     max_size: usize,
+    default_connect_timeout: u64,
+    default_query_timeout: u64,
 }
 
 impl PoolManager {
@@ -39,11 +46,13 @@ impl PoolManager {
             max_pools: cfg.pool_max_pools,
             idle_timeout: Duration::from_secs(cfg.pool_idle_timeout),
             max_size: cfg.pool_max_size,
+            default_connect_timeout: cfg.pg_connect_timeout,
+            default_query_timeout: cfg.pg_query_timeout,
         })
     }
 
     /// 池键：含连接标识 + 安全配置 hash（密码/证书），仅打印脱敏前缀。
-    fn pool_key(c: &DatasourceConfig) -> String {
+    fn pool_key(c: &DatasourceConfig, connect_timeout: u64, query_timeout: u64) -> String {
         let mut h = Md5::new();
         h.update(c.password.as_bytes());
         h.update(c.ssl_root_cert.as_deref().unwrap_or("").as_bytes());
@@ -51,8 +60,15 @@ impl PoolManager {
         h.update(c.ssl_key.as_deref().unwrap_or("").as_bytes());
         let sec = hex::encode(h.finalize());
         format!(
-            "{}:{}:{}:{}:{}:{}",
-            c.host, c.port, c.username, c.database, c.ssl_mode, &sec[..12]
+            "{}:{}:{}:{}:{}:{}:{}:{}",
+            c.host,
+            c.port,
+            c.username,
+            c.database,
+            c.ssl_mode,
+            connect_timeout,
+            query_timeout,
+            &sec[..12]
         )
     }
 
@@ -63,6 +79,18 @@ impl PoolManager {
             "disable" => SslMode::Disable,
             _ => SslMode::Require,
         }
+    }
+
+    fn effective_connect_timeout(&self, c: &DatasourceConfig) -> u64 {
+        c.connect_timeout
+            .unwrap_or(self.default_connect_timeout)
+            .clamp(MIN_CONNECT_TIMEOUT, MAX_CONNECT_TIMEOUT)
+    }
+
+    fn effective_query_timeout(&self, c: &DatasourceConfig) -> u64 {
+        c.query_timeout
+            .unwrap_or(self.default_query_timeout)
+            .clamp(MIN_QUERY_TIMEOUT, MAX_QUERY_TIMEOUT)
     }
 
     fn build_pool(
@@ -100,9 +128,9 @@ impl PoolManager {
 
     /// 取一个连接（按需建池，命中则复用并 touch）。
     pub async fn acquire(&self, c: &DatasourceConfig) -> Result<Object, ConnectorError> {
-        let key = Self::pool_key(c);
-        let connect_timeout = c.connect_timeout.unwrap_or(5);
-        let query_timeout = c.query_timeout.unwrap_or(15);
+        let connect_timeout = self.effective_connect_timeout(c);
+        let query_timeout = self.effective_query_timeout(c);
+        let key = Self::pool_key(c, connect_timeout, query_timeout);
 
         let pool = {
             let mut map = self.pools.lock().await;
@@ -140,8 +168,12 @@ impl PoolManager {
         let wait = Duration::from_secs(connect_timeout.saturating_add(2));
         match tokio::time::timeout(wait, pool.get()).await {
             Ok(Ok(obj)) => Ok(obj),
-            Ok(Err(e)) => Err(ConnectorError::ConnectionFailed(format!("acquire connection: {e}"))),
-            Err(_) => Err(ConnectorError::QueryTimeout("connection pool wait timeout".into())),
+            Ok(Err(e)) => Err(ConnectorError::ConnectionFailed(format!(
+                "acquire connection: {e}"
+            ))),
+            Err(_) => Err(ConnectorError::QueryTimeout(
+                "connection pool wait timeout".into(),
+            )),
         }
     }
 
@@ -184,5 +216,61 @@ impl PoolManager {
     /// 当前缓存的池数量（可观测）。
     pub async fn pool_count(&self) -> usize {
         self.pools.lock().await.len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datasource(query_timeout: Option<u64>) -> DatasourceConfig {
+        DatasourceConfig {
+            host: "db.example.com".into(),
+            username: "u".into(),
+            password: "p".into(),
+            database: "d".into(),
+            query_timeout,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn pool_key_changes_when_effective_timeout_changes() {
+        let cfg = datasource(None);
+
+        assert_ne!(
+            PoolManager::pool_key(&cfg, 5, 15),
+            PoolManager::pool_key(&cfg, 5, 1)
+        );
+        assert_ne!(
+            PoolManager::pool_key(&cfg, 5, 15),
+            PoolManager::pool_key(&cfg, 2, 15)
+        );
+    }
+
+    #[test]
+    fn pool_key_uses_request_timeout_override_value() {
+        let cfg = datasource(Some(3));
+
+        assert_eq!(
+            PoolManager::pool_key(&cfg, 5, cfg.query_timeout.unwrap()),
+            PoolManager::pool_key(&cfg, 5, 3)
+        );
+    }
+
+    #[test]
+    fn effective_timeouts_are_clamped_to_protocol_budget() {
+        let manager = PoolManager {
+            pools: Mutex::new(HashMap::new()),
+            max_pools: 1,
+            idle_timeout: Duration::from_secs(1),
+            max_size: 1,
+            default_connect_timeout: 0,
+            default_query_timeout: 120,
+        };
+        let cfg = DatasourceConfig::default();
+
+        assert_eq!(manager.effective_connect_timeout(&cfg), MIN_CONNECT_TIMEOUT);
+        assert_eq!(manager.effective_query_timeout(&cfg), MAX_QUERY_TIMEOUT);
     }
 }

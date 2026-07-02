@@ -4,6 +4,7 @@ import { RotateCcw } from "lucide-react";
 import { ConnectStep } from "./components/ConnectStep";
 import { TableStep } from "./components/TableStep";
 import { ErrorBanner } from "./components/ErrorBanner";
+import { Button } from "./components/ui/Button";
 import { useBitable } from "./hooks/useBitable";
 import { useConfig } from "./hooks/useConfig";
 import { getHelperErrorMessage } from "./api/errors";
@@ -235,15 +236,14 @@ export default function App() {
     <div className="db-app" ref={appRef}>
       <div className="db-head">
         <span className="db-head__title">数据同步</span>
-        <button
-          type="button"
+        <Button
           className="db-head__reset"
           onClick={handleReset}
           disabled={!dirty || syncing || connecting}
         >
           <RotateCcw />
           重置
-        </button>
+        </Button>
       </div>
 
       <div className="db-card" ref={cardRef}>

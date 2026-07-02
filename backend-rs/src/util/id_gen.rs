@@ -17,7 +17,13 @@ pub fn make_field_id(column_name: &str) -> String {
 pub fn make_primary_id(raw: &str) -> String {
     let sanitized: String = raw
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     let s = if sanitized.is_empty() {
         let digest = hex::encode(Md5::digest(raw.as_bytes()));

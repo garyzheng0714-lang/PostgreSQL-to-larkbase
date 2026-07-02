@@ -1,4 +1,4 @@
-export const MIN_FRAME_WIDTH = 420;
+export const MIN_FRAME_WIDTH = 410;
 export const MAX_FRAME_WIDTH = 840;
 export const MIN_FRAME_HEIGHT = 226;
 export const MAX_FRAME_HEIGHT = 606;

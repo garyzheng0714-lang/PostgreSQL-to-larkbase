@@ -1,4 +1,5 @@
 import type { ConnectionInfo, SslMode } from "../types";
+import { Button } from "./ui/Button";
 
 interface ManualFieldsProps {
   connection: ConnectionInfo;
@@ -93,8 +94,7 @@ export function ManualFields({ connection, onChange }: ManualFieldsProps) {
         <span className="db-sublabel">SSL</span>
         <div className="db-seg">
           {SSL_OPTIONS.map((opt) => (
-            <button
-              type="button"
+            <Button
               key={opt.value}
               className={`db-seg__item${
                 (connection.ssl_mode ?? "disable") === opt.value
@@ -104,7 +104,7 @@ export function ManualFields({ connection, onChange }: ManualFieldsProps) {
               onClick={() => set({ ssl_mode: opt.value })}
             >
               {opt.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

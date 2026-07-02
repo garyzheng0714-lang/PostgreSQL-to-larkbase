@@ -28,13 +28,16 @@ fn lookup(base: &str) -> Option<i32> {
         | "macaddr8" | "tsvector" | "tsquery" | "interval" | "bit" | "bit varying" | "varbit"
         | "pg_lsn" | "enum" | "user-defined" => FIELD_TEXT,
         // 数字类
-        "int2" | "smallint" | "int4" | "integer" | "int" | "int8" | "bigint" | "float4" | "real"
-        | "float8" | "double precision" | "numeric" | "decimal" | "serial" | "smallserial"
-        | "bigserial" | "oid" => FIELD_NUMBER,
+        "int2" | "smallint" | "int4" | "integer" | "int" | "int8" | "bigint" | "float4"
+        | "real" | "float8" | "double precision" | "numeric" | "decimal" | "serial"
+        | "smallserial" | "bigserial" | "oid" => FIELD_NUMBER,
         // 布尔
         "bool" | "boolean" => FIELD_CHECKBOX,
         // 日期
-        "date" | "timestamp" | "timestamp without time zone" | "timestamptz"
+        "date"
+        | "timestamp"
+        | "timestamp without time zone"
+        | "timestamptz"
         | "timestamp with time zone" => FIELD_DATE,
         // 时间（无日期）→ 文本
         "time" | "time without time zone" | "timetz" | "time with time zone" => FIELD_TEXT,
@@ -64,7 +67,12 @@ pub fn map_pg_type(pg_type: &str) -> i32 {
 pub fn can_be_primary(field_type: i32) -> bool {
     matches!(
         field_type,
-        FIELD_TEXT | FIELD_NUMBER | FIELD_DATE | FIELD_HYPERLINK | FIELD_PHONE | FIELD_BARCODE
+        FIELD_TEXT
+            | FIELD_NUMBER
+            | FIELD_DATE
+            | FIELD_HYPERLINK
+            | FIELD_PHONE
+            | FIELD_BARCODE
             | FIELD_CURRENCY
     )
 }
@@ -75,14 +83,28 @@ mod tests {
 
     #[test]
     fn text_types() {
-        for t in ["text", "varchar", "character varying", "uuid", "json", "jsonb"] {
+        for t in [
+            "text",
+            "varchar",
+            "character varying",
+            "uuid",
+            "json",
+            "jsonb",
+        ] {
             assert_eq!(map_pg_type(t), FIELD_TEXT, "{t}");
         }
     }
 
     #[test]
     fn numeric_types() {
-        for t in ["int4", "integer", "bigint", "numeric", "double precision", "serial"] {
+        for t in [
+            "int4",
+            "integer",
+            "bigint",
+            "numeric",
+            "double precision",
+            "serial",
+        ] {
             assert_eq!(map_pg_type(t), FIELD_NUMBER, "{t}");
         }
     }
