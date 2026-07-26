@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">FBIF DataBridge · 数据桥</title>
+  <desc id="heroDesc">飞书多维表格自定义数据连接器：把 PostgreSQL 的表、视图或只读 SQL 结果按 Connector 协议同步进多维表格。图中左边是 PostgreSQL 数据表，右边是同步后的多维表格。</desc>
+
+  <defs>
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, "Cascadia Mono", monospace; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="380" rx="26" fill="#0B1220"/>
+
+  <!-- 左：标题区 -->
+  <g id="title-block" class="sans">
+    <rect x="64" y="72" width="6" height="22" rx="3" fill="#4A87C7"/>
+    <text x="82" y="90" font-size="22" font-weight="600" fill="#6FA3DC" letter-spacing="1">飞书多维表格 · 自定义数据连接器</text>
+
+    <text x="64" y="162" font-size="54" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">FBIF DataBridge</text>
+
+    <text x="64" y="212" font-size="24" fill="#9AA8BC">把 PostgreSQL 表、视图或只读 SQL 的结果，</text>
+    <text x="64" y="248" font-size="24" fill="#9AA8BC">接进飞书多维表格，由飞书侧调度按需拉取。</text>
+
+    <text x="64" y="312" font-size="18" class="mono" fill="#5B6B80">FastAPI · Axum · asyncpg · React</text>
+  </g>
+
+  <!-- 中左：PostgreSQL 表 -->
+  <g id="pg-table" class="sans">
+    <rect x="596" y="72" width="210" height="208" rx="10" fill="#11192B" stroke="#22314C" stroke-width="1"/>
+    <path d="M596 82 a10 10 0 0 1 10 -10 h190 a10 10 0 0 1 10 10 v26 h-210 z" fill="#336791"/>
+    <text x="610" y="97" font-size="17" class="mono" font-weight="600" fill="#FFFFFF">public.orders</text>
+
+    <text x="610" y="132" font-size="16" class="mono" fill="#7E90AA">id</text>
+    <text x="648" y="132" font-size="16" class="mono" fill="#7E90AA">customer</text>
+    <text x="792" y="132" font-size="16" class="mono" fill="#7E90AA" text-anchor="end">amount</text>
+    <line x1="608" y1="142" x2="794" y2="142" stroke="#22314C" stroke-width="1"/>
+
+    <g class="mono" font-size="16" fill="#C4CFDF">
+      <text x="610" y="166">01</text><text x="648" y="166">上海测试</text><text x="792" y="166" text-anchor="end">12,400</text>
+      <text x="610" y="196">02</text><text x="648" y="196">北京远望</text><text x="792" y="196" text-anchor="end">8,600</text>
+      <text x="610" y="226">03</text><text x="648" y="226">深圳云岚</text><text x="792" y="226" text-anchor="end">23,150</text>
+      <text x="610" y="256">04</text><text x="648" y="256">杭州青屿</text><text x="792" y="256" text-anchor="end">5,900</text>
+    </g>
+  </g>
+
+  <!-- 中：Connector 协议 -->
+  <g id="connector" class="sans">
+    <text x="879" y="158" font-size="17" class="mono" fill="#8CA0BC" text-anchor="middle">Connector</text>
+    <path d="M845 178 h60" stroke="#4A87C7" stroke-width="2" stroke-linecap="round"/>
+    <path d="M893 171 l8 7 -8 7" fill="none" stroke="#4A87C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="879" y="204" font-size="17" class="mono" fill="#5B6B80" text-anchor="middle">SHA1 签名</text>
+  </g>
+
+  <!-- 中右：多维表格 -->
+  <g id="bitable" class="sans">
+    <rect x="952" y="72" width="190" height="208" rx="10" fill="#FFFFFF"/>
+    <path d="M952 82 a10 10 0 0 1 10 -10 h170 a10 10 0 0 1 10 10 v26 h-190 z" fill="#00B96B"/>
+    <text x="966" y="97" font-size="17" font-weight="600" fill="#FFFFFF">订单同步表</text>
+
+    <text x="966" y="132" font-size="16" class="mono" fill="#8F959E">#</text>
+    <text x="1000" y="132" font-size="16" fill="#8F959E">客户</text>
+    <text x="1128" y="132" font-size="16" fill="#8F959E" text-anchor="end">金额</text>
+    <line x1="964" y1="142" x2="1130" y2="142" stroke="#EDEFF2" stroke-width="1"/>
+
+    <g font-size="16" fill="#1F2329">
+      <text x="966" y="166" class="mono">01</text><text x="1000" y="166">上海测试</text><text x="1128" y="166" class="mono" text-anchor="end">12,400</text>
+      <text x="966" y="196" class="mono">02</text><text x="1000" y="196">北京远望</text><text x="1128" y="196" class="mono" text-anchor="end">8,600</text>
+      <text x="966" y="226" class="mono">03</text><text x="1000" y="226">深圳云岚</text><text x="1128" y="226" class="mono" text-anchor="end">23,150</text>
+      <text x="966" y="256" class="mono">04</text><text x="1000" y="256">杭州青屿</text><text x="1128" y="256" class="mono" text-anchor="end">5,900</text>
+    </g>
+    <line x1="992" y1="150" x2="992" y2="270" stroke="#EDEFF2" stroke-width="1"/>
+    <line x1="1064" y1="150" x2="1064" y2="270" stroke="#EDEFF2" stroke-width="1"/>
+  </g>
+
+  <!-- 底：协议端点 -->
+  <text x="596" y="318" font-size="17" class="mono" fill="#4F5F75">/meta.json · /api/table_meta · /api/records</text>
+</svg>
