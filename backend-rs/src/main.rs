@@ -30,8 +30,15 @@ async fn main() {
         .expect("install prometheus recorder");
 
     let cfg = Config::from_env();
-    if !cfg.is_dev_mode() && cfg.secret_key.is_empty() {
-        tracing::warn!("SECRET_KEY 未配置，生产环境请设置强随机值");
+    if let Some(reason) = cfg.startup_error() {
+        tracing::error!("{reason}");
+        std::process::exit(1);
+    }
+    if cfg.is_dev_mode() {
+        tracing::warn!("开发模式：验签与 helper 鉴权全部放行，仅限本机使用");
+    }
+    if cfg.allow_unsigned {
+        tracing::error!("ALLOW_UNSIGNED 已开启：带时间戳与 nonce 的无签名请求会被放行；配置飞书签名后应关闭");
     }
 
     // 装配适配器注册表（PostgreSQL）+ 启动连接池清理循环。

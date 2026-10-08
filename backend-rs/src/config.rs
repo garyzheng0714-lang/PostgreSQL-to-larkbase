@@ -23,6 +23,8 @@ pub struct Config {
     /// 未配 secretKey、只发 ts+nonce 无签名的情况，与旧 Python 后端行为一致）。
     /// 默认 false（严格要求签名）。配好飞书 Verification token 后应关闭以恢复强验签。
     pub allow_unsigned: bool,
+    /// 显式允许以开发默认密钥启动（仅本机开发）；未开启时缺少真实 SECRET_KEY 会拒绝启动。
+    pub allow_dev_mode: bool,
     /// 单配置连接池最大连接数。
     pub pool_max_size: usize,
     /// 连接池空闲回收超时（秒）。
@@ -57,6 +59,10 @@ impl Config {
                 env_or("ALLOW_UNSIGNED", "false").to_lowercase().as_str(),
                 "true" | "1" | "yes"
             ),
+            allow_dev_mode: matches!(
+                env_or("ALLOW_DEV_MODE", "false").to_lowercase().as_str(),
+                "true" | "1" | "yes"
+            ),
             pool_max_size: env_parse("POOL_MAX_SIZE", 5),
             pool_idle_timeout: env_parse("POOL_IDLE_TIMEOUT", 300),
             pool_max_pools: env_parse("POOL_MAX_POOLS", 20),
@@ -66,5 +72,38 @@ impl Config {
     /// 开发模式：密钥未配置（仍为占位 `testBase`）。
     pub fn is_dev_mode(&self) -> bool {
         self.secret_key == "testBase"
+    }
+
+    /// 启动前的安全检查（fail-closed）：dev 模式会放行验签和 helper 鉴权，空密钥则谁都能算出签名。
+    pub fn startup_error(&self) -> Option<&'static str> {
+        if self.secret_key.is_empty() {
+            return Some("SECRET_KEY 为空，任何人都能计算签名；请设置强随机值");
+        }
+        if self.is_dev_mode() && !self.allow_dev_mode {
+            return Some("SECRET_KEY 未配置（仍为开发默认值）；生产请设置强随机值，本机开发请显式设置 ALLOW_DEV_MODE=true");
+        }
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn startup_requires_real_secret_unless_dev_mode_is_explicit() {
+        let mut c = Config::from_env();
+        c.allow_dev_mode = false;
+        c.secret_key = "testBase".into();
+        assert!(c.startup_error().is_some());
+        c.secret_key = String::new();
+        assert!(c.startup_error().is_some());
+        c.allow_dev_mode = true;
+        assert!(c.startup_error().is_some(), "empty secret is never allowed");
+        c.secret_key = "testBase".into();
+        assert!(c.startup_error().is_none());
+        c.allow_dev_mode = false;
+        c.secret_key = "real-secret".into();
+        assert!(c.startup_error().is_none());
     }
 }

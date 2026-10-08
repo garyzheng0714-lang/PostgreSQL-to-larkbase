@@ -21,7 +21,8 @@ BIND_ADDR=127.0.0.1:18082 SECRET_KEY=<密钥> ./target/release/fbif-databridge
 ## 配置（环境变量）
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `SECRET_KEY` | `testBase` | 验签密钥；保持默认即 dev 模式（放行验签/helper） |
+| `SECRET_KEY` | `testBase` | 验签密钥；缺失、为空或仍为 `testBase` 时拒绝启动 |
+| `ALLOW_DEV_MODE` | `false` | 仅本机开发：设为 `true` 才允许以 `testBase` 启动，此时验签与 helper 鉴权全部放行 |
 | `FRONTEND_URL` | `http://localhost:5173` | 前端配置页 URL（写入 meta.json） |
 | `BIND_ADDR` | `0.0.0.0:8000` | 监听地址（生产 18082，Caddy 反代目标） |
 | `HELPER_API_KEY` | 空 | 前端辅助接口 key；**生产必须设置**，否则 helper fail-closed 拒绝 |
