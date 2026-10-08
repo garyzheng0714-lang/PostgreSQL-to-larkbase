@@ -5,20 +5,21 @@
 
 ## Architecture
 - **Frontend**: React + Vite + Semi UI (`frontend/`)，作为飞书 iframe 内的配置页面
-- **Backend**: Python FastAPI + asyncpg (`backend/`)，Docker 部署
+- **Backend**: 生产跑 Rust 重写版 `backend-rs/`（容器 `pg2bitable-backend-rs`）；`backend/` 是旧 Python 版，已不部署
 - **Adapter Layer**: `backend/src/adapters/` — 数据源适配器抽象层，支持多数据源扩展
   - `base.py` — DataSourceAdapter Protocol + 共享数据类型
   - `registry.py` — 全局适配器注册表
   - `postgres/` — PostgreSQL 适配器实现（含连接池、类型映射、值格式化）
 - **Error Handling**: `backend/src/middleware/error_handler.py` — 统一 ConnectorError + 全局异常处理
 - **Reverse Proxy**: Caddy，域名 `pg2bitable.garyzheng.com`
-- **Server**: 阿里云 ECS `112.124.103.65`（SSH alias: `aliyun-prod`）
+- **Server**: 阿里云 ECS `121.40.214.5`（2026-09-13 从已下线的 112.124.103.65 迁入）
 
 ## Deployment
-- **Auto Deploy**: GitHub Actions SSH 部署，push 到 `main` 自动触发
-- **Frontend**: CI 构建后 rsync dist 到 `/opt/pg2bitable/frontend/dist/`
-- **Backend**: rsync 源码 + `docker compose build && up -d`
-- **Caddy** serve 前端静态文件，反代后端 `127.0.0.1:18082`
+- **Auto Deploy**: push 到 `main`（或手动 workflow_dispatch）触发 `.github/workflows/deploy.yml`
+- **CI**: 前端 `npm test` + build；Rust 镜像在 CI 构建，tag 为提交 SHA，scp 到服务器 `docker load`
+- **Server**: 改 `/opt/fbif-one-api/services/postgres-to-feishu/compose.yaml` 的镜像 tag，跑同目录 `deploy.sh apply`；前端换到同目录 `frontend/dist`（上一版留在 `dist.prev`）；健康/公网校验失败自动回到上一个 tag 和上一版前端
+- **Caddy**（`/etc/caddy/sites/pg2bitable.caddy`）serve 前端静态文件，反代后端 `127.0.0.1:18083`
+- 仓库根目录的 `deploy.sh`、`docker-compose.yml` 是旧 Python 部署，勿用
 
 ## Critical: Feishu CDN Cache (MUST FOLLOW)
 

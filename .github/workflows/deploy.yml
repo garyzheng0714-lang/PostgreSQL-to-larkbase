@@ -1,28 +1,32 @@
 name: Deploy to Production
 
+# 生产（2026-09-13 起）：121.40.214.5，Rust 后端 + 静态前端，
+# 由 /opt/fbif-one-api/services/postgres-to-feishu/compose.yaml 维护（容器 pg2bitable-backend-rs，127.0.0.1:18083）。
+# 镜像在 CI 构建（服务器拉 Docker Hub 会鉴权失败，LTO=fat 也不适合在生产机编译），按提交 SHA 打 tag 传过去，
+# 改 compose 的镜像 tag 后用服务器上的 deploy.sh 起新容器；健康或公网校验失败就回到上一个 tag 和上一版前端。
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      # -- Frontend Build --
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install & build frontend
+      - name: Test & build frontend
         working-directory: frontend
         env:
           VITE_API_BASE_URL: ""
@@ -33,66 +37,94 @@ jobs:
             exit 1
           fi
           npm ci
+          npm test
           npm run build
+          tar -czf /tmp/pg2-frontend-${GITHUB_SHA}.tgz -C dist .
 
-      # -- SSH Setup --
+      - name: Build Rust image
+        working-directory: backend-rs
+        run: |
+          docker build -t fbif-databridge-rs:${GITHUB_SHA} .
+          docker save fbif-databridge-rs:${GITHUB_SHA} | gzip > /tmp/pg2-image-${GITHUB_SHA}.tar.gz
+
       - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      # -- Deploy Frontend --
-      - name: Deploy frontend static files
+      - name: Ship image and frontend
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            frontend/dist/ \
-            root@${{ secrets.SERVER_HOST }}:/opt/pg2bitable/frontend/dist/
+          scp -i ~/.ssh/deploy_key \
+            /tmp/pg2-image-${GITHUB_SHA}.tar.gz /tmp/pg2-frontend-${GITHUB_SHA}.tgz \
+            root@"$SERVER_HOST":/tmp/
 
-      # -- Deploy Backend & Rebuild --
-      - name: Sync backend source
+      - name: Deploy with rollback
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
-          rsync -avz --delete \
-            --exclude='.env*' \
-            --exclude='__pycache__' \
-            --exclude='.venv' \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            backend/ \
-            root@${{ secrets.SERVER_HOST }}:/opt/pg2bitable/backend/
+          ssh -i ~/.ssh/deploy_key root@"$SERVER_HOST" "SHA=${GITHUB_SHA} bash -s" <<'ENDSSH'
+          set -euo pipefail
+          DIR=/opt/fbif-one-api/services/postgres-to-feishu
+          exec 9>/tmp/pg2bitable-deploy.lock
+          flock 9
 
-      - name: Rebuild and restart backend
-        run: |
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-          set -e
-          cd /opt/pg2bitable
-          echo "Rebuilding backend container..."
-          docker compose build backend
-          docker compose up -d backend
-          echo "Waiting for container to be healthy..."
-          for i in $(seq 1 12); do
-            STATUS=$(docker inspect pg2bitable-backend --format '{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
-            echo "  Attempt $i/12: $STATUS"
-            if [ "$STATUS" = "healthy" ]; then
-              echo "Deploy successful - container is healthy"
-              exit 0
+          gunzip -c /tmp/pg2-image-$SHA.tar.gz | docker load
+          docker image inspect fbif-databridge-rs:$SHA >/dev/null
+
+          cd "$DIR"
+          PREV=$(awk '$1=="image:"{print $2; exit}' compose.yaml)
+          echo "previous image: $PREV"
+          cp compose.yaml compose.yaml.prev
+          rm -rf frontend/dist.new
+          mkdir -p frontend/dist.new
+          tar --no-same-owner -xzf /tmp/pg2-frontend-$SHA.tgz -C frontend/dist.new
+          test -s frontend/dist.new/index.html
+
+          rollback() {
+            echo "Deploy failed; restoring $PREV and the previous frontend"
+            cp compose.yaml.prev compose.yaml
+            if [ -d frontend/dist.prev ] && [ ! -d frontend/dist.new ]; then
+              rm -rf frontend/dist && mv frontend/dist.prev frontend/dist
             fi
-            sleep 5
+            rm -rf frontend/dist.new
+            ./deploy.sh apply || true
+            docker logs pg2bitable-backend-rs --tail 40 || true
+          }
+          trap 'rollback; exit 1' ERR
+
+          sed -i "s#^\(\s*image:\s*\)fbif-databridge-rs:.*#\1fbif-databridge-rs:$SHA#" compose.yaml
+          grep -q "fbif-databridge-rs:$SHA" compose.yaml
+          ./deploy.sh apply
+          test "$(docker inspect pg2bitable-backend-rs --format '{{.Config.Image}}')" = "fbif-databridge-rs:$SHA"
+
+          rm -rf frontend/dist.prev
+          mv frontend/dist frontend/dist.prev
+          mv frontend/dist.new frontend/dist
+
+          for path in /health /ready /meta.json /; do
+            curl -fsS -o /dev/null --max-time 10 "https://pg2bitable.garyzheng.com$path"
           done
-          echo "Container did not become healthy in 60s"
-          docker logs pg2bitable-backend --tail 20
-          exit 1
+          trap - ERR
+
+          rm -f /tmp/pg2-image-$SHA.tar.gz /tmp/pg2-frontend-$SHA.tgz
+          # 只留当前和上一个镜像（迁移基线 migrated-20260913 保留作回退）
+          docker images fbif-databridge-rs --format '{{.Tag}}' \
+            | grep -vxE "$SHA|${PREV#*:}|migrated-20260913" \
+            | xargs -r -I{} docker rmi fbif-databridge-rs:{} || true
+          echo "Deployed fbif-databridge-rs:$SHA"
           ENDSSH
 
-      # -- Verify --
       - name: Verify deployment
         run: |
-          sleep 3
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://pg2bitable.garyzheng.com/meta.json)
-          if [ "$STATUS" = "200" ]; then
-            echo "Deployment verified - site is live"
-          else
-            echo "Warning: got HTTP $STATUS from site"
-            exit 1
-          fi
+          for path in /health /meta.json /; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://pg2bitable.garyzheng.com$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ]
+          done
