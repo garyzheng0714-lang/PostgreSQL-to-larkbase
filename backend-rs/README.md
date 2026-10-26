@@ -25,7 +25,7 @@ BIND_ADDR=127.0.0.1:18082 SECRET_KEY=<密钥> ./target/release/fbif-databridge
 | `ALLOW_DEV_MODE` | `false` | 仅本机开发：设为 `true` 才允许以 `testBase` 启动，此时验签与 helper 鉴权全部放行 |
 | `FRONTEND_URL` | `http://localhost:5173` | 前端配置页 URL（写入 meta.json） |
 | `BIND_ADDR` | `0.0.0.0:8000` | 监听地址（生产 18082，Caddy 反代目标） |
-| `HELPER_API_KEY` | 空 | 前端辅助接口 key；**生产必须设置**，否则 helper fail-closed 拒绝 |
+| `HELPER_API_KEY` | 空 | 前端辅助接口 key；**生产必须设置**，否则 helper fail-closed 拒绝。生产由 FBIF 中台写 `/etc/fbif-hub/env/pg2bitable.env`，配置页经 `GET /api/helper/key` 运行时来要 |
 | `MAX_ROW_LIMIT` | `50000` | 单次同步最大行数 |
 | `PG_CONNECT_TIMEOUT` / `PG_QUERY_TIMEOUT` | `5` / `15` | 连接/查询超时（秒） |
 | `POOL_MAX_SIZE` / `POOL_IDLE_TIMEOUT` / `POOL_MAX_POOLS` | `5` / `300` / `20` | 连接池 |

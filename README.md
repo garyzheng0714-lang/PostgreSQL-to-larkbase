@@ -162,7 +162,7 @@ docker compose up -d --build
 | `MAX_ROW_LIMIT` | 单次同步总行数上限 |
 | `PG_CONNECT_TIMEOUT` / `PG_QUERY_TIMEOUT` | PostgreSQL 连接和查询超时 |
 | `POOL_MAX_SIZE` / `POOL_IDLE_TIMEOUT` / `POOL_MAX_POOLS` | 连接池边界 |
-| `HELPER_API_KEY` | 配置页 helper API key |
+| `HELPER_API_KEY` | 配置页 helper API key；生产由 FBIF 中台下发，配置页运行时经 `GET /api/helper/key` 来要 |
 
 Python 还读取 `BACKEND_URL`、`CORS_ORIGINS`；Rust 还读取 `BIND_ADDR`、`RUST_LOG`、`ALLOW_UNSIGNED`。
 
@@ -171,11 +171,10 @@ Python 还读取 `BACKEND_URL`、`CORS_ORIGINS`；Rust 还读取 `BIND_ADDR`、`
 | 变量 | 说明 |
 | --- | --- |
 | `VITE_API_BASE_URL` | 后端基地址；同域部署使用空字符串 |
-| `VITE_HELPER_API_KEY` | helper key，必须与后端一致 |
 | `VITE_DEFAULT_PORT` / `VITE_DEFAULT_SCHEMA` | 默认 PostgreSQL 端口和 Schema |
 | `VITE_MOCK` | 仅开发模式 UI mock |
 
-> 所有 `VITE_*` 值都会进入浏览器产物。`VITE_HELPER_API_KEY` 只能视为低强度调用门槛，**不能替代**网络限制、速率限制和数据库只读权限。
+> 所有 `VITE_*` 值都会进入浏览器产物。helper key 同样会到每个打开配置页的浏览器里，只能视为低强度调用门槛，**不能替代**网络限制、速率限制和数据库只读权限。
 
 ## 验证
 

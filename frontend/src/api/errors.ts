@@ -7,7 +7,7 @@ interface HelperHttpError {
 }
 
 const HELPER_AUTH_MESSAGE =
-  "后端辅助接口鉴权失败，请检查 HELPER_API_KEY 与前端 VITE_HELPER_API_KEY 是否一致";
+  "后端辅助接口鉴权失败，请检查后端是否读到 HELPER_API_KEY";
 
 export function getHelperErrorMessage(
   error: unknown,

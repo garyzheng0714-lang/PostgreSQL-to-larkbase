@@ -26,16 +26,12 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # HELPER_API_KEY 不进构建产物：配置页运行时向后端要（GET /api/helper/key），后端从中台文件拿
       - name: Test & build frontend
         working-directory: frontend
         env:
           VITE_API_BASE_URL: ""
-          VITE_HELPER_API_KEY: ${{ secrets.HELPER_API_KEY }}
         run: |
-          if [ -z "$VITE_HELPER_API_KEY" ]; then
-            echo "HELPER_API_KEY GitHub secret is required for helper API auth"
-            exit 1
-          fi
           npm ci
           npm test
           npm run build
@@ -79,6 +75,12 @@ jobs:
           docker image inspect fbif-databridge-rs:$SHA >/dev/null
 
           cd "$DIR"
+          # HELPER_API_KEY 归 FBIF 中台：本机代理写这个文件，compose.yaml 的 env_file 把它排在 runtime.env 后面、同名以它为准
+          # （FBIF-One-Api docs/hub/公共变量和密钥.md）。和 compose 一样叠起来查，缺了就在替换后端前停下。
+          HUB_ENV=/etc/fbif-hub/env/pg2bitable.env
+          grep -qF "$HUB_ENV" compose.yaml || { echo "compose.yaml env_file does not include $HUB_ENV; deployment stopped before replacing the backend"; exit 1; }
+          docker compose -f compose.yaml config --format json | jq -e '.services.bridge.environment.HELPER_API_KEY // "" | length > 0' >/dev/null \
+            || { echo "HELPER_API_KEY is empty after layering $HUB_ENV; deployment stopped before replacing the backend"; exit 1; }
           PREV=$(awk '$1=="image:"{print $2; exit}' compose.yaml)
           echo "previous image: $PREV"
           cp compose.yaml compose.yaml.prev
@@ -111,6 +113,8 @@ jobs:
           for path in /health /ready /meta.json /; do
             curl -fsS -o /dev/null --max-time 10 "https://pg2bitable.garyzheng.com$path"
           done
+          # 配置页向新后端要得到 helper key（只判断非空，不打印）
+          curl -fsS --max-time 10 https://pg2bitable.garyzheng.com/api/helper/key | jq -e '.key | length > 0' >/dev/null
           trap - ERR
 
           rm -f /tmp/pg2-image-$SHA.tar.gz /tmp/pg2-frontend-$SHA.tgz

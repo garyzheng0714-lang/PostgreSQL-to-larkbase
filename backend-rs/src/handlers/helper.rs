@@ -4,10 +4,12 @@
 //! - dev 模式 → 放行；
 //! - 配置了 HELPER_API_KEY → 校验 `X-Helper-Api-Key` 头；
 //! - 未配置且非 dev → **一律拒绝**（避免公开探测数据库能力）。
+//!
+//! key 由 FBIF 中台下发到后端环境，配置页运行时经 `GET /api/helper/key` 来要，不在构建时写进前端。
 
 use axum::extract::{FromRequestParts, State};
 use axum::http::request::Parts;
-use axum::http::StatusCode;
+use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
@@ -115,6 +117,17 @@ impl FromRequestParts<AppState> for HelperAuth {
         }
         Ok(HelperAuth)
     }
+}
+
+/// `GET /api/helper/key` —— 把当前 helper key 交给配置页。
+/// 这把 key 本来就会到每个打开配置页的浏览器里，只挡泛扫，所以不鉴权；
+/// 改成运行时来要，中台换 key 时重建后端就行，前端不用重新构建，两边也不会对不上。
+pub async fn key(State(state): State<AppState>) -> Response {
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Json(json!({ "key": state.cfg.helper_api_key })),
+    )
+        .into_response()
 }
 
 fn fail(message: &str) -> Json<Value> {
@@ -258,4 +271,64 @@ pub async fn preview_sql(
         })
         .collect();
     Json(json!({ "success": true, "data": { "columns": columns, "rows": preview } }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use axum::body::Body;
+    use axum::http::Request;
+    use http_body_util::BodyExt;
+    use metrics_exporter_prometheus::PrometheusBuilder;
+    use tower::ServiceExt;
+
+    use super::*;
+    use crate::adapter::registry::Registry;
+    use crate::config::Config;
+    use crate::metadata_cache::MetadataCache;
+    use crate::server::build_router;
+
+    fn app(helper_api_key: &str) -> axum::Router {
+        let mut cfg = Config::from_env();
+        cfg.secret_key = "real-secret".into();
+        cfg.helper_api_key = helper_api_key.into();
+        build_router(AppState {
+            cfg,
+            registry: Arc::new(Registry::new()),
+            metrics: PrometheusBuilder::new().build_recorder().handle(),
+            metadata_cache: Arc::new(MetadataCache::new(Duration::from_secs(1), 1)),
+        })
+    }
+
+    fn probe(key: &str) -> Request<Body> {
+        Request::post("/api/helper/test_connection")
+            .header("content-type", "application/json")
+            .header("x-helper-api-key", key)
+            .body(Body::from("{}"))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn config_page_gets_the_key_the_guard_accepts() {
+        let app = app("hub-key");
+        let res = app
+            .clone()
+            .oneshot(Request::get("/api/helper/key").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-store");
+        let body: Value =
+            serde_json::from_slice(&res.into_body().collect().await.unwrap().to_bytes()).unwrap();
+        let key = body["key"].as_str().unwrap();
+        assert_eq!(key, "hub-key");
+
+        // 鉴权在解析请求体之前：key 对了只会因缺字段被拒，不会是 401
+        let ok = app.clone().oneshot(probe(key)).await.unwrap();
+        assert_ne!(ok.status(), StatusCode::UNAUTHORIZED);
+        let stale = app.oneshot(probe("old-key")).await.unwrap();
+        assert_eq!(stale.status(), StatusCode::UNAUTHORIZED);
+    }
 }

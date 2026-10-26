@@ -19,6 +19,7 @@
 - **CI**: 前端 `npm test` + build；Rust 镜像在 CI 构建，tag 为提交 SHA，scp 到服务器 `docker load`
 - **Server**: 改 `/opt/fbif-one-api/services/postgres-to-feishu/compose.yaml` 的镜像 tag，跑同目录 `deploy.sh apply`；前端换到同目录 `frontend/dist`（上一版留在 `dist.prev`）；健康/公网校验失败自动回到上一个 tag 和上一版前端
 - **Caddy**（`/etc/caddy/sites/pg2bitable.caddy`）serve 前端静态文件，反代后端 `127.0.0.1:18083`
+- **HELPER_API_KEY 归 FBIF 中台**：本机代理写 `/etc/fbif-hub/env/pg2bitable.env`，服务器 `compose.yaml` 的 `env_file` 把它排在 `runtime.env` 后面（同名以它为准）；中台换值时代理跑 `docker compose -f …/compose.yaml -p pg2bitable up -d --force-recreate --no-deps bridge`。前端不在构建时写 key，配置页运行时经 `GET /api/helper/key` 向后端要；CI 和 GitHub Secrets 不再经手。部署前 compose 叠起来拿不到 key 就停下
 - 仓库根目录的 `deploy.sh`、`docker-compose.yml` 是旧 Python 部署，勿用
 
 ## Critical: Feishu CDN Cache (MUST FOLLOW)

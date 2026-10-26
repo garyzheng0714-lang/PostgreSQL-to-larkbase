@@ -88,6 +88,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/table_meta", post(table_meta::table_meta))
         .route("/api/records", post(records::records))
         // 前端辅助接口
+        .route("/api/helper/key", get(helper::key))
         .route("/api/helper/test_connection", post(helper::test_connection))
         .route("/api/helper/databases", post(helper::list_databases))
         .route("/api/helper/schemas", post(helper::list_schemas))
