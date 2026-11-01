@@ -13,11 +13,13 @@ RUN mkdir src && echo 'fn main() {}' > src/main.rs && touch src/lib.rs \
     && rm -rf src target/release/fbif-databridge* target/release/deps/fbif_databridge-* \
        target/release/deps/libfbif_databridge-* target/release/.fingerprint/fbif-databridge-*
 # 拷源码并构建（release：lto + 单 codegen-unit + strip，见 Cargo.toml）。
-# touch 让源码比空壳新，cargo 一定重编本包。
+# touch 让源码比空壳新，cargo 一定重编本包。编完删 target，这一层只剩二进制，
+# CI 每次写回缓存时不用再传整个 target 目录。
 COPY src ./src
 RUN touch src/main.rs src/lib.rs \
     && cargo build --release --locked \
-    && cp target/release/fbif-databridge /fbif-databridge
+    && cp target/release/fbif-databridge /fbif-databridge \
+    && rm -rf target
 
 # ---- 运行阶段 ----
 FROM alpine:3
