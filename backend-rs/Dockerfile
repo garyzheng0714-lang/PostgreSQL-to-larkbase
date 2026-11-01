@@ -5,11 +5,18 @@
 FROM rust:1-alpine AS builder
 RUN apk add --no-cache musl-dev
 WORKDIR /build
-# 先拷依赖清单，利用缓存层
+# 先只拷依赖清单，用空壳 main/lib 把依赖编好：Cargo.toml/Cargo.lock 不变时这一层直接命中缓存，
+# 只改业务代码不会重编几百个依赖。删掉空壳自己的产物，免得下一层误用。
 COPY Cargo.toml Cargo.lock ./
-# 拷源码并构建（release：lto + 单 codegen-unit + strip，见 Cargo.toml）
+RUN mkdir src && echo 'fn main() {}' > src/main.rs && touch src/lib.rs \
+    && cargo build --release --locked \
+    && rm -rf src target/release/fbif-databridge* target/release/deps/fbif_databridge-* \
+       target/release/deps/libfbif_databridge-* target/release/.fingerprint/fbif-databridge-*
+# 拷源码并构建（release：lto + 单 codegen-unit + strip，见 Cargo.toml）。
+# touch 让源码比空壳新，cargo 一定重编本包。
 COPY src ./src
-RUN cargo build --release --locked \
+RUN touch src/main.rs src/lib.rs \
+    && cargo build --release --locked \
     && cp target/release/fbif-databridge /fbif-databridge
 
 # ---- 运行阶段 ----
